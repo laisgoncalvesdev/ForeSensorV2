@@ -1,0 +1,2214 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ForeSensor — Mapeamento de Formigueiros</title>
+<link rel="icon" href="public/logo-light.png" type="image/png"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+<style>
+:root{
+  --bg:#ffffff;--fg:#1a1a1a;
+  --green-50:#f0faf0;--green-100:#dcf0dc;--green-200:#b8e0b8;--green-300:#8ecc8e;
+  --green-400:#5cb85c;--green-500:#3a9a3a;--green-600:#2e7d2e;--green-700:#1f5c1f;--green-800:#144014;
+  --gray-50:#f5f5f7;--gray-100:#ebebed;--gray-200:#d8d8da;--gray-300:#b8b8ba;
+  --gray-400:#8e8e93;--gray-500:#636366;--gray-600:#48484a;--gray-700:#2c2c2e;
+  --danger:#ff3b30;--warning:#ff9500;--sidebar-w:256px;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.04),0 2px 8px rgba(0,0,0,.06);
+  --shadow-md:0 2px 4px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.08);
+}
+[data-theme="dark"]{
+  --bg:#1c1c1e;--fg:#f5f5f7;
+  --green-50:#0a1f0a;--green-100:#122412;--green-200:#1a3a1a;--green-300:#1f5c1f;
+  --green-400:#25792a;--green-500:#30d158;--green-600:#4ade80;--green-700:#86efac;--green-800:#bbf7d0;
+  --gray-50:#0a0a0a;--gray-100:#1c1c1e;--gray-200:#2c2c2e;--gray-300:#3a3a3c;
+  --gray-400:#636366;--gray-500:#8e8e93;--gray-600:#aeaeb2;--gray-700:#d1d1d6;
+  --danger:#ff453a;--warning:#ff9f0a;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.2),0 2px 8px rgba(0,0,0,.3);
+  --shadow-md:0 2px 4px rgba(0,0,0,.2),0 8px 24px rgba(0,0,0,.4);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,sans-serif;background:var(--gray-50);color:var(--fg);min-height:100vh;-webkit-font-smoothing:antialiased;}
+.screen{display:none;min-height:100vh;}
+.screen.active{display:flex;}
+
+/* LOGIN */
+#login-screen{align-items:center;justify-content:center;background:var(--gray-50);padding:16px;position:relative;z-index:1100;}
+.login-wrap{width:100%;max-width:420px;}
+.login-brand{text-align:center;margin-bottom:32px;}
+.login-brand h1{font-size:28px;font-weight:800;color:var(--fg);letter-spacing:-1px;}
+.login-brand p{font-size:14px;color:var(--gray-500);margin-top:4px;}
+.login-logo{width:72px;height:72px;object-fit:contain;margin-bottom:12px;}
+.login-card{background:var(--bg);border:none;border-radius:20px;padding:32px;box-shadow:var(--shadow-md);}
+.login-card h2{font-size:18px;font-weight:600;margin-bottom:24px;color:var(--fg);}
+.form-group{margin-bottom:16px;}
+.form-group label{display:block;font-size:14px;font-weight:500;color:var(--gray-700);margin-bottom:6px;}
+.input-wrap{position:relative;}
+.form-input{width:100%;padding:10px 16px;font-size:14px;border:1px solid var(--gray-200);border-radius:8px;background:var(--bg);color:var(--fg);outline:none;transition:border-color .2s;}
+.form-input:focus{border-color:var(--green-400);box-shadow:0 0 0 3px rgba(106,196,107,.15);}
+.form-input::placeholder{color:var(--gray-400);}
+.toggle-pw{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--gray-400);padding:4px;}
+.toggle-pw:hover{color:var(--gray-600);}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:600;border:none;border-radius:8px;cursor:pointer;transition:background .2s,opacity .2s;padding:10px 20px;}
+.btn-primary{width:100%;background:var(--green-500);color:#fff;}
+.btn-primary:hover{background:var(--green-600);}
+.btn-primary:disabled{opacity:.6;cursor:not-allowed;}
+.error-msg{background:#fef2f2;color:var(--danger);font-size:14px;padding:8px 12px;border-radius:8px;margin-bottom:16px;display:none;}
+[data-theme="dark"] .error-msg{background:#2a1a1a;}
+.login-toggle{text-align:center;margin-top:24px;}
+.login-toggle button{background:none;border:none;color:var(--green-600);font-size:14px;font-weight:500;cursor:pointer;}
+.login-toggle button:hover{color:var(--green-700);}
+
+/* APP SHELL */
+#app-screen{flex-direction:row;background:var(--gray-50);}
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sidebar-w);background:var(--bg);border-right:1px solid rgba(0,0,0,.06);display:flex;flex-direction:column;z-index:1000;transition:transform .25s;}
+.sidebar-header{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--gray-200);}
+.sidebar-logo{width:32px;height:32px;object-fit:contain;flex-shrink:0;}
+.sidebar-logo-dark{display:none;}
+[data-theme="dark"] .sidebar-logo-light{display:none;}
+[data-theme="dark"] .sidebar-logo-dark{display:block;}
+.sidebar-header span{font-size:18px;font-weight:600;color:var(--fg);}
+.sidebar nav{flex:1;padding:12px;overflow-y:auto;}
+.nav-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;font-size:14px;font-weight:500;color:var(--gray-600);cursor:pointer;transition:background .15s,color .15s;border:none;background:none;width:100%;text-align:left;}
+.nav-item:hover{background:var(--gray-100);color:var(--fg);}
+.nav-item.active{background:var(--green-100);color:var(--green-700);}
+.nav-item svg{width:18px;height:18px;flex-shrink:0;}
+.sidebar-footer{border-top:1px solid var(--gray-200);padding:12px;}
+.theme-toggle{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;font-size:14px;font-weight:500;color:var(--gray-600);cursor:pointer;background:none;border:none;width:100%;text-align:left;transition:background .15s;}
+.theme-toggle:hover{background:var(--gray-100);}
+.user-row{display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:8px;}
+.avatar{width:36px;height:36px;border-radius:50%;background:var(--green-200);color:var(--green-700);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;overflow:hidden;}
+.user-info{flex:1;min-width:0;}
+.user-info .name{font-size:14px;font-weight:500;color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.user-info .role{font-size:12px;color:var(--gray-500);}
+.btn-logout{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;font-size:14px;font-weight:500;color:var(--danger);cursor:pointer;background:none;border:none;width:100%;text-align:left;transition:background .15s;}
+.btn-logout:hover{background:#fef2f2;}
+[data-theme="dark"] .btn-logout:hover{background:#2a1a1a;}
+.main-content{flex:1;margin-left:var(--sidebar-w);padding:32px;min-height:100vh;box-sizing:border-box;width:100%;overflow-x:hidden;}
+.page{display:none;}
+.page.active{display:block;}
+.page-title{font-size:24px;font-weight:700;color:var(--fg);letter-spacing:-0.5px;}
+.page-sub{font-size:14px;color:var(--gray-400);margin-top:4px;}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:24px;}
+.stat-card{background:var(--bg);border:none;border-radius:16px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow-sm);}
+.stat-label{font-size:13px;color:var(--gray-400);font-weight:500;}
+.stat-value{font-size:28px;font-weight:700;color:var(--fg);margin-top:2px;letter-spacing:-1px;}
+.stat-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;}
+.stat-icon svg{width:20px;height:20px;}
+
+/* CARDS */
+.activity-card,.chart-card,.settings-card{background:var(--bg);border:none;border-radius:16px;padding:24px;margin-top:20px;box-shadow:var(--shadow-sm);}
+.activity-card h2,.chart-card-header h2,.settings-card h2{font-size:17px;font-weight:600;color:var(--fg);margin-bottom:16px;letter-spacing:-0.3px;}
+.chart-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+.chart-card-header h2{margin:0;}
+.chart-card-header span{font-size:13px;color:var(--gray-500);}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px;color:var(--gray-400);font-size:14px;}
+.empty-state svg{margin-bottom:12px;width:40px;height:40px;color:var(--gray-300);}
+.economy-bar{display:flex;gap:24px;margin-top:16px;flex-wrap:wrap;}
+.economy-item{background:var(--green-50);border:1px solid var(--green-200);border-radius:10px;padding:14px 20px;flex:1;min-width:160px;}
+.economy-item .eco-label{font-size:12px;color:var(--gray-500);}
+.economy-item .eco-value{font-size:22px;font-weight:700;color:var(--green-600);margin-top:4px;}
+
+/* UPLOAD */
+.model-status-bar{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:12px;margin-bottom:16px;background:var(--bg);border:none;font-size:13px;box-shadow:var(--shadow-sm);}
+.model-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;background:var(--gray-300);}
+.model-dot.loading{background:#f59e0b;animation:pulse 1s infinite;}
+.model-dot.ready{background:#22c55e;}
+.model-dot.error{background:#ef4444;}
+.drop-zone{border:1.5px dashed var(--gray-200);border-radius:20px;padding:48px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;background:var(--bg);margin-top:24px;box-shadow:var(--shadow-sm);}
+.drop-zone:hover{border-color:var(--green-400);background:var(--green-50);}
+.drop-icon{width:56px;height:56px;border-radius:50%;background:var(--green-100);display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;}
+.drop-icon svg{width:24px;height:24px;color:var(--green-600);}
+.drop-zone p{font-size:14px;font-weight:500;color:var(--fg);}
+.drop-zone small{font-size:12px;color:var(--gray-400);}
+.file-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-top:16px;}
+.file-card{border:none;border-radius:16px;overflow:hidden;background:var(--bg);box-shadow:var(--shadow-sm);}
+.file-card img{width:100%;height:120px;object-fit:cover;display:block;}
+.file-card .file-info{padding:8px;}
+.file-card .file-name{font-size:12px;color:var(--gray-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cnn-state-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+.cnn-state-badge.formigueiro{background:#fef3c7;color:#92400e;}
+.cnn-state-badge.trilha{background:#dbeafe;color:#1e40af;}
+.cnn-state-badge.ambos{background:#fee2e2;color:#991b1b;}
+.cnn-state-badge.pendente{background:#f1f5f9;color:#64748b;}
+.conf-row{display:flex;align-items:center;gap:8px;margin-top:4px;font-size:11px;color:var(--gray-500);}
+.conf-bar-wrap{flex:1;background:var(--gray-200);border-radius:4px;height:5px;}
+.conf-bar-fill{height:5px;border-radius:4px;transition:width .6s ease;}
+.conf-pct{font-size:11px;font-weight:600;color:var(--fg);min-width:36px;text-align:right;}
+.upload-actions{display:flex;align-items:center;justify-content:space-between;margin-top:24px;}
+.upload-actions p{font-size:14px;font-weight:500;color:var(--fg);}
+.btn-sm{padding:8px 16px;font-size:14px;font-weight:600;border-radius:8px;border:none;cursor:pointer;background:var(--green-500);color:#fff;transition:background .2s;}
+.btn-sm:hover{background:var(--green-600);}
+.btn-sm:disabled{opacity:.6;cursor:not-allowed;}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--gray-300);flex-shrink:0;}
+.live-dot.on{background:#22c55e;animation:pulse 1.5s infinite;}
+.live-dot.err{background:#ef4444;}
+
+/* MAP */
+.map-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+.btn-outline{display:flex;align-items:center;gap:8px;padding:8px 16px;font-size:14px;font-weight:500;border:1px solid var(--gray-200);border-radius:8px;background:var(--bg);color:var(--gray-600);cursor:pointer;transition:background .15s;}
+.btn-outline:hover{background:var(--gray-50);}
+.btn-outline svg{width:16px;height:16px;}
+.map-container{border:none;border-radius:20px;overflow:hidden;background:var(--bg);height:500px;position:relative;z-index:1;isolation:isolate;box-shadow:var(--shadow-sm);}
+#leaflet-map{height:100%;width:100%;}
+.nest-list{background:var(--bg);border:none;border-radius:16px;margin-top:20px;overflow:hidden;box-shadow:var(--shadow-sm);}
+.nest-list-header{padding:14px 20px;border-bottom:1px solid var(--gray-100);font-size:14px;font-weight:600;color:var(--fg);}
+.nest-row{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--gray-100);}
+.nest-row:last-child{border-bottom:none;}
+.nest-dot{width:36px;height:36px;border-radius:50%;background:var(--green-100);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.nest-dot svg{width:16px;height:16px;color:var(--green-600);}
+.nest-coords{font-size:14px;font-weight:500;color:var(--fg);}
+.nest-meta{font-size:12px;color:var(--gray-500);}
+
+/* SETTINGS */
+.profile-row{display:flex;align-items:center;gap:16px;margin-bottom:24px;}
+.avatar-lg{width:80px;height:80px;border-radius:50%;background:var(--green-200);color:var(--green-700);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;position:relative;flex-shrink:0;overflow:hidden;}
+.avatar-lg img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.profile-details .name{font-size:16px;font-weight:500;color:var(--fg);}
+.profile-details .email{font-size:14px;color:var(--gray-500);}
+.role-badge{display:inline-block;margin-top:4px;padding:2px 10px;font-size:12px;font-weight:500;border-radius:99px;background:var(--green-100);color:var(--green-700);}
+.theme-row{display:flex;align-items:center;justify-content:space-between;padding:16px;border:1px solid var(--gray-200);border-radius:8px;}
+.theme-info{display:flex;align-items:center;gap:12px;}
+.theme-info svg{width:20px;height:20px;}
+.theme-label{font-size:14px;font-weight:500;color:var(--fg);}
+.theme-desc{font-size:12px;color:var(--gray-500);}
+.switch{position:relative;width:48px;height:28px;background:var(--gray-300);border-radius:99px;border:none;cursor:pointer;transition:background .2s;}
+.switch.on{background:var(--green-500);}
+.switch::after{content:'';position:absolute;top:2px;left:2px;width:24px;height:24px;background:#fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.15);transition:transform .2s;}
+.switch.on::after{transform:translateX(20px);}
+
+/* ADMIN */
+.admin-tabs{display:flex;gap:4px;margin-top:20px;border-bottom:1px solid var(--gray-200);}
+.admin-tab{background:none;border:none;padding:10px 20px;font-size:14px;font-weight:500;color:var(--gray-400);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s;}
+.admin-tab.active{color:var(--green-600);border-bottom-color:var(--green-500);font-weight:600;}
+.admin-tab-content{display:none;margin-top:20px;}
+.admin-tab-content.active{display:block;}
+.admin-table{background:var(--bg);border:none;border-radius:16px;overflow:hidden;box-shadow:var(--shadow-sm);}
+.admin-table-header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--gray-100);font-size:14px;font-weight:600;color:var(--fg);}
+.admin-row{display:flex;align-items:center;padding:14px 20px;border-bottom:1px solid var(--gray-100);gap:12px;}
+.admin-row:last-child{border-bottom:none;}
+.admin-row-info{flex:1;min-width:0;}
+.admin-row-info .row-name{font-size:14px;font-weight:500;color:var(--fg);}
+.admin-row-info .row-sub{font-size:12px;color:var(--gray-500);margin-top:2px;}
+.admin-row-actions{display:flex;gap:8px;align-items:center;flex-shrink:0;}
+.badge{padding:2px 10px;font-size:12px;font-weight:500;border-radius:99px;}
+.badge-admin{background:#f3e8ff;color:#7c3aed;}
+.badge-operator{background:var(--green-100);color:var(--green-700);}
+.badge-viewer{background:var(--gray-100);color:var(--gray-600);}
+[data-theme="dark"] .badge-admin{background:#2d1a4e;color:#c084fc;}
+.role-select{padding:6px 28px 6px 12px;font-size:12px;font-weight:500;border:1px solid var(--gray-200);border-radius:8px;background:var(--bg);color:var(--fg);appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7a6b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;}
+
+/* BUTTONS */
+.btn-icon{background:none;border:1px solid var(--gray-200);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:500;cursor:pointer;color:var(--gray-600);transition:all .15s;display:flex;align-items:center;gap:4px;}
+.btn-icon:hover{background:var(--gray-100);}
+.btn-icon.danger{color:var(--danger);border-color:#fca5a5;}
+.btn-icon.danger:hover{background:#fff1f1;}
+.btn-primary-sm{background:var(--green-500);color:white;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;}
+.btn-primary-sm:hover{background:var(--green-600);}
+
+/* MODALS */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;display:none;align-items:center;justify-content:center;padding:16px;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:var(--bg);border:none;border-radius:20px;width:100%;max-width:460px;box-shadow:0 8px 16px rgba(0,0,0,.06),0 24px 64px rgba(0,0,0,.14);}
+.modal-header{display:flex;justify-content:space-between;align-items:center;padding:20px 24px 16px;border-bottom:1px solid var(--gray-200);}
+.modal-header h3{font-size:16px;font-weight:600;color:var(--fg);margin:0;}
+.modal-header button{background:none;border:none;cursor:pointer;color:var(--gray-400);font-size:22px;line-height:1;padding:0;}
+.modal-header button:hover{color:var(--fg);}
+.modal-body{padding:20px 24px;display:flex;flex-direction:column;gap:14px;}
+.modal-body label{font-size:13px;font-weight:500;color:var(--gray-700);margin-bottom:4px;display:block;}
+.modal-body input,.modal-body select{width:100%;border:1px solid var(--gray-200);border-radius:8px;padding:9px 12px;font-size:14px;color:var(--fg);background:var(--bg);box-sizing:border-box;outline:none;}
+.modal-body input:focus,.modal-body select:focus{border-color:var(--green-400);}
+.modal-body .field-group{display:flex;flex-direction:column;gap:4px;}
+.modal-footer{display:flex;justify-content:flex-end;gap:10px;padding:16px 24px 20px;border-top:1px solid var(--gray-200);}
+.btn-secondary{background:none;border:1px solid var(--gray-300);border-radius:8px;padding:8px 18px;font-size:14px;font-weight:500;color:var(--gray-600);cursor:pointer;}
+.btn-secondary:hover{background:var(--gray-100);}
+.btn-danger{background:var(--danger);border:none;border-radius:8px;padding:8px 18px;font-size:14px;font-weight:600;color:white;cursor:pointer;}
+.btn-danger:hover{background:#b91c1c;}
+
+/* TOGGLE SMALL */
+.toggle-sm{position:relative;width:36px;height:20px;flex-shrink:0;}
+.toggle-sm input{opacity:0;width:0;height:0;position:absolute;}
+.toggle-sm-track{position:absolute;inset:0;background:var(--gray-300);border-radius:20px;cursor:pointer;transition:background .2s;}
+.toggle-sm-track::after{content:'';position:absolute;top:3px;left:3px;width:14px;height:14px;background:white;border-radius:50%;transition:left .2s;}
+.toggle-sm input:checked+.toggle-sm-track{background:var(--green-500);}
+.toggle-sm input:checked+.toggle-sm-track::after{left:19px;}
+
+/* TOAST */
+.toast-wrap{position:fixed;bottom:24px;right:24px;display:flex;flex-direction:column;gap:8px;z-index:9999;pointer-events:none;}
+.toast{background:rgba(30,30,30,.92);color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.25);opacity:0;transform:translateY(8px);transition:opacity .25s,transform .25s;pointer-events:auto;backdrop-filter:blur(12px);}
+.toast.show{opacity:1;transform:none;}
+.toast.error{background:var(--danger);color:#fff;}
+.toast.success{background:#16a34a;color:#fff;}
+
+/* DEVICE KEY BOX */
+.device-key-box{background:var(--gray-100);border:1px solid var(--gray-200);border-radius:8px;padding:10px 14px;font-family:monospace;font-size:12px;color:var(--gray-600);word-break:break-all;margin-top:6px;}
+
+/* MODEL STATUS BADGE — fixed top-right */
+.model-status-badge{position:fixed;top:20px;right:72px;z-index:600;display:none;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--gray-200);border-radius:99px;padding:5px 12px 5px 8px;font-size:12px;font-weight:500;color:var(--gray-600);box-shadow:0 1px 4px rgba(0,0,0,.08);white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis;}
+.model-status-badge.visible{display:flex;}
+@media(max-width:768px){.model-status-badge{right:68px;max-width:140px;font-size:11px;}}
+
+/* NOTIFICATION BELL — fixed top-right */
+.notif-btn{position:fixed;top:16px;right:24px;z-index:600;width:40px;height:40px;border-radius:50%;background:var(--bg);border:1px solid var(--gray-200);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;box-shadow:0 1px 4px rgba(0,0,0,.08);}
+.notif-btn:hover{background:var(--gray-100);}
+.notif-btn svg{width:18px;height:18px;color:var(--gray-600);}
+.notif-badge{position:absolute;top:4px;right:4px;width:16px;height:16px;background:var(--danger);border-radius:50%;font-size:10px;font-weight:700;color:#fff;align-items:center;justify-content:center;border:2px solid var(--bg);display:none;}
+.notif-panel{position:fixed;top:64px;right:24px;width:340px;background:var(--bg);border:none;border-radius:20px;box-shadow:0 8px 16px rgba(0,0,0,.06),0 24px 64px rgba(0,0,0,.14);z-index:601;display:none;overflow:hidden;}
+.notif-panel.open{display:block;animation:fadeIn .2s ease;}
+.notif-panel-header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--gray-200);}
+.notif-panel-header h3{font-size:14px;font-weight:600;color:var(--fg);margin:0;}
+.notif-clear{background:none;border:none;font-size:12px;color:var(--green-600);cursor:pointer;font-weight:500;}
+.notif-list{max-height:360px;overflow-y:auto;}
+.notif-item{display:flex;gap:10px;padding:12px 16px;border-bottom:1px solid var(--gray-100);cursor:default;transition:background .1s;}
+.notif-item:hover{background:var(--gray-50);}
+.notif-item:last-child{border-bottom:none;}
+.notif-icon{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;}
+.notif-text{flex:1;min-width:0;}
+.notif-text .notif-title{font-size:13px;font-weight:500;color:var(--fg);}
+.notif-text .notif-time{font-size:11px;color:var(--gray-400);margin-top:2px;}
+.notif-empty{padding:32px;text-align:center;color:var(--gray-400);font-size:13px;}
+.notif-unread{background:var(--green-50);}
+
+/* SIDEBAR PROFILE CLICKABLE */
+.user-row{cursor:pointer;transition:background .15s;border-radius:8px;}
+.user-row:hover{background:var(--gray-100);}
+.user-row-hint{font-size:10px;color:var(--gray-400);margin-top:1px;}
+
+
+/* MOBILE */
+.mobile-menu{display:none;position:fixed;top:16px;left:16px;z-index:1001;width:40px;height:40px;border-radius:8px;background:var(--green-100);border:none;cursor:pointer;align-items:center;justify-content:center;}
+.mobile-menu svg{width:20px;height:20px;color:var(--green-700);}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:999;}
+.sidebar-close{display:none;background:none;border:none;cursor:pointer;color:var(--gray-500);padding:4px;margin-left:auto;}
+.sidebar-close svg{width:20px;height:20px;}
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0);}
+  .sidebar-overlay.open{display:block;}
+  .mobile-menu{display:flex;}
+  .sidebar-close{display:block;}
+  .main-content{margin-left:0;padding:16px;padding-top:64px;}
+  .stats-grid{grid-template-columns:1fr 1fr;}
+  .admin-row{flex-wrap:wrap;}
+  .admin-row-info{min-width:0;flex:1 1 60%;}
+  .modal-box{margin:8px;}
+}
+@media(max-width:480px){
+  .economy-bar{flex-direction:column;}
+  .admin-row{flex-direction:column;align-items:flex-start;gap:8px;}
+  .admin-row-actions{width:100%;justify-content:flex-end;}
+  .stats-grid{grid-template-columns:1fr;}
+  .stat-value{font-size:20px;}
+  .page-title{font-size:20px;}
+  #leaflet-map{height:280px!important;}
+  .modal-footer{flex-direction:column;}
+  .modal-footer button{width:100%;justify-content:center;}
+  .admin-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .admin-tab{white-space:nowrap;padding:10px 14px;}
+}
+@media(min-width:1600px){
+  .main-content{max-width:1400px;}
+  .stats-grid{grid-template-columns:repeat(4,1fr);}
+}
+.leaflet-container{font-family:inherit;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen" class="screen active">
+  <div class="login-wrap">
+    <div class="login-brand">
+      <img id="login-logo" src="public/logo-light.png" alt="ForeSensor" class="login-logo">
+      <h1>ForeSensor</h1>
+      <p>Sistema de mapeamento de formigueiros</p>
+    </div>
+    <div class="login-card">
+      <h2 id="login-title">Entrar</h2>
+      <div id="name-field" class="form-group" style="display:none">
+        <label>Nome completo</label>
+        <input id="input-name" type="text" class="form-input" placeholder="Seu nome completo">
+      </div>
+      <div id="phone-field" class="form-group" style="display:none">
+        <label>Telefone</label>
+        <input id="input-phone" type="tel" class="form-input" placeholder="(00) 00000-0000">
+      </div>
+      <div class="form-group">
+        <label>E-mail</label>
+        <input id="input-email" type="email" class="form-input" placeholder="seu@email.com">
+      </div>
+      <div class="form-group">
+        <label>Senha</label>
+        <div class="input-wrap">
+          <input id="input-pw" type="password" class="form-input" placeholder="Mínimo 6 caracteres" style="padding-right:40px">
+          <button class="toggle-pw" onclick="togglePw()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+      <div id="login-error" class="error-msg"></div>
+      <button class="btn btn-primary" id="btn-login" onclick="handleAuth()">
+        <span id="login-btn-text">Entrar</span>
+      </button>
+      <div class="login-toggle">
+        <button id="toggle-signup" onclick="toggleSignUp()">Não tem conta? Criar uma</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-screen" class="screen">
+  <button class="mobile-menu" onclick="openSidebar()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <div id="sidebar-overlay" class="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-header">
+      <img src="public/logo-light.png" alt="ForeSensor" class="sidebar-logo sidebar-logo-light">
+      <img src="public/logo-dark.png" alt="ForeSensor" class="sidebar-logo sidebar-logo-dark">
+      <span>ForeSensor</span>
+      <button class="sidebar-close" onclick="closeSidebar()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <nav>
+      <button class="nav-item active" data-page="dashboard" onclick="goTo('dashboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </button>
+      <button class="nav-item" data-page="upload" onclick="goTo('upload')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+        Analisar
+      </button>
+      <button class="nav-item" data-page="map" onclick="goTo('map')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+        Mapa
+      </button>
+      <button class="nav-item" data-page="settings" onclick="goTo('settings')" id="nav-settings" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Configurações
+      </button>
+      <button class="nav-item" data-page="admin" onclick="goTo('admin')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Admin
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="theme-toggle" onclick="toggleTheme()">
+        <svg id="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" style="flex-shrink:0"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <svg id="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" style="display:none;flex-shrink:0"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <span id="theme-label">Modo Noturno</span>
+      </button>
+      <div class="user-row" onclick="goTo('settings')" title="Abrir configurações">
+        <div class="avatar" id="user-avatar">??</div>
+        <div class="user-info">
+          <div class="name" id="user-display-name">—</div>
+          <div class="role" id="user-display-role">—</div>
+          <div class="user-row-hint">Clique para editar perfil</div>
+        </div>
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--gray-400)" stroke-width="2" width="14" height="14" style="flex-shrink:0"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </div>
+      <button class="btn-logout" onclick="doLogout()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Sair
+      </button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+
+    <!-- MODEL STATUS BADGE (fixed top-right, beside bell) -->
+    <div class="model-status-badge" id="model-status-bar">
+      <div class="model-dot" id="model-dot"></div>
+      <span id="model-status-text">Aguardando modelo...</span>
+    </div>
+
+    <!-- NOTIFICATION BELL (fixed top-right) -->
+    <button class="notif-btn" onclick="toggleNotifPanel()" id="notif-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span class="notif-badge" id="notif-badge">0</span>
+    </button>
+    <div class="notif-panel" id="notif-panel">
+      <div class="notif-panel-header">
+        <h3>Notificações</h3>
+        <button class="notif-clear" onclick="clearNotifs()">Limpar tudo</button>
+      </div>
+      <div class="notif-list" id="notif-list">
+        <div class="notif-empty">Nenhuma notificação</div>
+      </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="page-dashboard" class="page active">
+      <h1 class="page-title">Olá, <span id="dash-name">—</span></h1>
+      <p class="page-sub">Bem-vindo ao painel do ForeSensor</p>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div><div class="stat-label">Formigueiros Detectados</div><div class="stat-value" id="stat-nests">—</div></div>
+          <div class="stat-icon" style="background:var(--green-100)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--green-600)" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+        </div>
+        <div class="stat-card">
+          <div><div class="stat-label">Sem Formigueiro</div><div class="stat-value" id="stat-images">—</div></div>
+          <div class="stat-icon" style="background:#f1f5f9"><svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg></div>
+        </div>
+        <div class="stat-card">
+          <div><div class="stat-label">Imagens Analisadas</div><div class="stat-value" id="stat-users">—</div></div>
+          <div class="stat-icon" style="background:#eff6ff"><svg viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+        </div>
+        <div class="stat-card">
+          <div><div class="stat-label">Processadas Hoje</div><div class="stat-value" id="stat-today">—</div></div>
+          <div class="stat-icon" style="background:#fffbeb"><svg viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <h2>Detecções por Mês</h2>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <select id="chart-month-filter" onchange="filterChart()" style="border:1px solid var(--gray-200);border-radius:8px;padding:5px 10px;font-size:12px;color:var(--fg);background:var(--bg);cursor:pointer;">
+              <option value="all">Todos os meses</option>
+              <option value="0">Janeiro</option><option value="1">Fevereiro</option><option value="2">Março</option>
+              <option value="3">Abril</option><option value="4">Maio</option><option value="5">Junho</option>
+              <option value="6">Julho</option><option value="7">Agosto</option><option value="8">Setembro</option>
+              <option value="9">Outubro</option><option value="10">Novembro</option><option value="11">Dezembro</option>
+            </select>
+            <button onclick="exportExcel()" style="border:1px solid var(--green-400);border-radius:8px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--green-600);background:var(--green-50);cursor:pointer;white-space:nowrap;">⬇ Excel</button>
+            <button onclick="exportPDF()" style="border:1px solid var(--gray-300);border-radius:8px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--gray-600);background:var(--bg);cursor:pointer;white-space:nowrap;">⬇ PDF</button>
+          </div>
+        </div>
+        <canvas id="nest-chart" height="110"></canvas>
+      </div>
+    </div>
+
+    <!-- ANALISAR -->
+    <div id="page-upload" class="page">
+      <h1 class="page-title">Analisar Imagens</h1>
+      <p class="page-sub">CNN MobileNetV2 detecta formigueiros direto no navegador</p>
+
+      <!-- Abas principais -->
+      <div class="admin-tabs" id="analyze-main-tabs" style="margin-top:20px;">
+        <button class="admin-tab active" id="analyze-main-tab-mode" onclick="switchAnalyzeMainTab('mode',this)">🔍 Modo de Análise</button>
+        <button class="admin-tab" id="analyze-main-tab-images" onclick="switchAnalyzeMainTab('images',this)" style="display:none;">🖼 Imagens</button>
+      </div>
+
+      <!-- Aba: Modo de Análise -->
+      <div id="analyze-tab-mode">
+        <!-- Sub-abas: Upload / Raspberry Pi -->
+        <div class="admin-tabs" style="margin-top:16px;">
+          <button class="admin-tab active" id="utab-btn-upload" onclick="switchUploadTab('upload',this)">📤 Upload</button>
+          <button class="admin-tab" id="utab-btn-rasp" onclick="switchUploadTab('rasp',this)">📡 Raspberry Pi <span id="rasp-pending-badge" style="display:none;background:var(--green-500);color:#fff;border-radius:99px;padding:1px 7px;font-size:11px;margin-left:4px;">0</span></button>
+        </div>
+        <!-- Upload manual -->
+        <div id="upload-tab-upload" style="margin-top:16px;">
+          <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+            <div class="drop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+            <p>Clique para selecionar ou arraste imagens aqui</p>
+            <small>JPG, PNG — Múltiplos arquivos permitidos</small>
+          </div>
+          <input type="file" id="file-input" accept="image/*" multiple style="display:none" onchange="handleFileSelect(event)">
+          <div id="upload-preview" style="display:none">
+            <div class="upload-actions">
+              <p id="file-count"></p>
+              <div style="display:flex;gap:8px;">
+                <button class="btn-sm" style="background:var(--gray-200);color:var(--fg);" onclick="clearFiles()">Limpar</button>
+                <button class="btn-sm" id="btn-analyze" onclick="runCNNAnalysis()">Analisar com IA</button>
+              </div>
+            </div>
+            <div class="file-grid" id="file-grid"></div>
+          </div>
+        </div>
+        <!-- Raspberry Pi -->
+        <div id="upload-tab-rasp" style="margin-top:16px;display:none;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+            <span id="rasp-pending-count" style="font-size:14px;font-weight:600;color:var(--fg);">Carregando...</span>
+            <div style="display:flex;gap:8px;">
+            <button id="btn-rasp-sync" onclick="syncStorageToDb()" style="font-size:12px;padding:6px 12px;background:none;color:var(--green-600);border:1px solid var(--green-400);border-radius:8px;cursor:pointer;font-weight:500;">🔄 Sincronizar</button>
+            <button id="btn-rasp-clear" onclick="clearPendingRasp()" style="display:none;font-size:12px;padding:6px 12px;background:none;color:var(--danger);border:1px solid var(--danger);border-radius:8px;cursor:pointer;font-weight:500;">🗑 Limpar pendentes</button>
+            <button id="btn-rasp-analyze-all" class="btn-primary-sm" onclick="analyzeAllRaspPending()" style="display:none;">⚡ Analisar todos</button>
+          </div>
+          </div>
+          <div id="rasp-pending-grid" style="display:flex;flex-direction:column;gap:8px;"></div>
+          <div id="rasp-empty" style="display:none;text-align:center;padding:48px 24px;color:var(--gray-400);">
+            <div style="font-size:36px;margin-bottom:12px;">📡</div>
+            <div style="font-size:14px;">Nenhuma imagem pendente do Raspberry Pi</div>
+            <div style="font-size:12px;margin-top:6px;">As fotos capturadas pelo Raspberry Pi aparecerão aqui para análise</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Aba: Imagens (somente admin) -->
+      <div id="analyze-tab-images" style="display:none;margin-top:16px;">
+        <div class="admin-table">
+          <div class="admin-table-header">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--gray-600);user-select:none;" onclick="event.stopPropagation()">
+              <input type="checkbox" id="check-all-images" onchange="toggleSelectAll(this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:var(--green-500);">
+              <span id="analyze-images-count">Imagens (0)</span>
+            </label>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <button id="btn-delete-selected" onclick="deleteSelectedImages()" class="btn-danger" style="display:none;font-size:13px;padding:6px 14px;">🗑 Apagar selecionadas</button>
+              <button class="btn-primary-sm" id="btn-analyze-pending2" onclick="analyzeAllPending()" style="display:none;">⚡ Analisar pendentes</button>
+            </div>
+          </div>
+          <div id="analyze-images-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAPA -->
+    <div id="page-map" class="page">
+      <div class="map-header">
+        <div>
+          <h1 class="page-title">Mapa de Formigueiros</h1>
+          <p class="page-sub" id="map-count-sub">0 formigueiro(s) detectado(s)</p>
+        </div>
+      </div>
+      <div class="map-container"><div id="leaflet-map"></div></div>
+      <div style="background:var(--bg);border:1px solid var(--gray-200);border-radius:12px;margin-top:16px;padding:16px 20px;">
+        <div style="font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:12px;">Legenda de Risco</div>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:14px;height:14px;border-radius:50%;background:#f59e0b;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3);flex-shrink:0;"></div>
+            <div><span style="font-size:12px;font-weight:600;color:var(--fg);">Formigueiro</span><span style="font-size:11px;color:var(--gray-500);margin-left:6px;">Nível Médio / Escalável</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONFIGURAÇÕES -->
+    <div id="page-settings" class="page">
+      <h1 class="page-title">Configurações</h1>
+      <p class="page-sub">Gerencie seu perfil e preferências</p>
+      <div class="settings-card">
+        <h2>Foto de Perfil</h2>
+        <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+          <div style="position:relative;cursor:pointer;" onclick="document.getElementById('avatar-file-input').click()">
+            <div id="settings-avatar-circle" class="avatar-lg"></div>
+            <div style="position:absolute;bottom:0;right:0;background:var(--green-500);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" width="13" height="13"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:var(--fg);" id="settings-name-display">—</div>
+            <div style="font-size:13px;color:var(--gray-500);margin-top:2px;" id="settings-email-display">—</div>
+            <span id="settings-role-badge" class="role-badge" style="margin-top:6px;display:inline-block;"></span>
+          </div>
+          <input type="file" id="avatar-file-input" accept="image/*" style="display:none" onchange="handleAvatarUpload(event)">
+        </div>
+        <div style="margin-top:12px;">
+          <button onclick="document.getElementById('avatar-file-input').click()" class="btn-secondary" style="font-size:13px;padding:7px 14px;">Alterar foto</button>
+          <button onclick="removeAvatar()" class="btn-secondary" style="font-size:13px;padding:7px 14px;margin-left:8px;color:var(--danger);border-color:#fca5a5;">Remover foto</button>
+        </div>
+      </div>
+      <div class="settings-card">
+        <h2>Dados Pessoais</h2>
+        <div style="display:grid;gap:14px;max-width:480px;">
+          <div class="form-group" style="margin:0;"><label>Nome completo</label><input id="settings-input-name" type="text" class="form-input" placeholder="Seu nome completo"></div>
+          <div class="form-group" style="margin:0;"><label>Telefone</label><input id="settings-input-phone" type="tel" class="form-input" placeholder="(00) 00000-0000"></div>
+        </div>
+        <div id="settings-profile-msg" style="display:none;margin-top:10px;font-size:13px;color:var(--green-600);"></div>
+        <button onclick="saveProfileSettings()" class="btn-sm" style="margin-top:16px;">Salvar alterações</button>
+      </div>
+      <div class="settings-card">
+        <h2>Alterar Senha</h2>
+        <div style="display:grid;gap:14px;max-width:480px;">
+          <div class="form-group" style="margin:0;"><label>Nova senha</label><input id="settings-pw-new" type="password" class="form-input" placeholder="Mínimo 6 caracteres"></div>
+          <div class="form-group" style="margin:0;"><label>Confirmar nova senha</label><input id="settings-pw-confirm" type="password" class="form-input" placeholder="Repita a nova senha"></div>
+        </div>
+        <div id="settings-pw-msg" style="display:none;margin-top:10px;font-size:13px;"></div>
+        <button onclick="savePasswordSettings()" class="btn-sm" style="margin-top:16px;">Alterar senha</button>
+      </div>
+      <div class="settings-card">
+        <h2>Aparência</h2>
+        <div class="theme-row">
+          <div class="theme-info">
+            <svg id="settings-theme-icon" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            <div><div class="theme-label" id="settings-theme-label">Modo Claro</div><div class="theme-desc">Altere a aparência do sistema</div></div>
+          </div>
+          <button class="switch" id="theme-switch" onclick="toggleTheme()"></button>
+        </div>
+      </div>
+      <div class="settings-card">
+        <h2>Conta</h2>
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+          <div><div style="font-size:14px;color:var(--fg);font-weight:500;">Encerrar sessão</div><div style="font-size:13px;color:var(--gray-500);margin-top:2px;">Você será redirecionado para a tela de login</div></div>
+          <button onclick="doLogout()" style="background:none;border:1px solid #fca5a5;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:600;color:var(--danger);cursor:pointer;">Sair da conta</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMIN -->
+    <div id="page-admin" class="page">
+      <h1 class="page-title">Painel Administrativo</h1>
+      <p class="page-sub">Gerencie usuários, detecções e dispositivos</p>
+      <div class="admin-tabs">
+        <button class="admin-tab active" onclick="switchAdminTab('users',this)">Usuários</button>
+        <button class="admin-tab" onclick="switchAdminTab('devices',this)">Raspberry Pi</button>
+        <button class="admin-tab" onclick="switchAdminTab('trash',this)" id="tab-btn-trash">🗑 Lixeira <span id="trash-badge" style="display:none;background:var(--danger);color:#fff;border-radius:99px;padding:1px 7px;font-size:11px;margin-left:4px;">0</span></button>
+      </div>
+      <div id="admin-tab-users" class="admin-tab-content active">
+        <div class="admin-table">
+          <div class="admin-table-header"><span id="admin-users-count">Usuários (0)</span></div>
+          <div id="admin-users-list"></div>
+        </div>
+      </div>
+      <div id="admin-tab-devices" class="admin-tab-content">
+        <div class="admin-table">
+          <div class="admin-table-header">
+            <span id="admin-devices-count">Dispositivos (0)</span>
+            <button class="btn-primary-sm" onclick="openAddDevice()">+ Adicionar Dispositivo</button>
+          </div>
+          <div id="admin-devices-list"></div>
+        </div>
+      </div>
+      <div id="admin-tab-trash" class="admin-tab-content">
+        <div class="admin-table">
+          <div class="admin-table-header">
+            <span id="admin-trash-count">Lixeira (0)</span>
+            <button class="btn-danger" style="font-size:13px;padding:6px 14px;" onclick="emptyTrash()">Esvaziar lixeira</button>
+          </div>
+          <div id="admin-trash-list"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL: Editar Usuário -->
+<div id="modal-edit-user" class="modal-overlay" onclick="if(event.target===this)closeModal('edit-user')">
+  <div class="modal-box">
+    <div class="modal-header"><h3>Editar Usuário</h3><button onclick="closeModal('edit-user')">&times;</button></div>
+    <div class="modal-body">
+      <div class="field-group"><label>Nome completo</label><input id="edit-user-name" type="text" placeholder="Nome do usuário"/></div>
+      <div class="field-group"><label>Telefone</label><input id="edit-user-phone" type="tel" placeholder="(00) 00000-0000"/></div>
+      <div class="field-group"><label>Cargo</label>
+        <select id="edit-user-role">
+          <option value="admin">Administrador</option>
+          <option value="operator">Operador</option>
+          <option value="viewer">Visualizador</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('edit-user')">Cancelar</button>
+      <button class="btn-primary" style="width:auto;" onclick="saveUserEdit()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Adicionar Dispositivo -->
+<div id="modal-add-device" class="modal-overlay" onclick="if(event.target===this)closeModal('add-device')">
+  <div class="modal-box">
+    <div class="modal-header"><h3>Adicionar Dispositivo Raspberry Pi</h3><button onclick="closeModal('add-device')">&times;</button></div>
+    <div class="modal-body">
+      <div class="field-group"><label>Nome do dispositivo</label><input id="device-name" type="text" placeholder="Ex: Raspberry Pi 1 — Talhão A"/></div>
+      <div class="field-group"><label>Local (opcional)</label><input id="device-location" type="text" placeholder="Ex: Setor Norte"/></div>
+      <div class="field-group"><label>Latitude (opcional)</label><input id="device-lat" type="number" step="any" placeholder="-15.000000"/></div>
+      <div class="field-group"><label>Longitude (opcional)</label><input id="device-lng" type="number" step="any" placeholder="-47.000000"/></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('add-device')">Cancelar</button>
+      <button class="btn-primary" style="width:auto;" onclick="saveDevice()">Criar Dispositivo</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Chave do Dispositivo -->
+<div id="modal-device-key" class="modal-overlay" onclick="if(event.target===this)closeModal('device-key')">
+  <div class="modal-box">
+    <div class="modal-header"><h3>Chave do Dispositivo</h3><button onclick="closeModal('device-key')">&times;</button></div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:var(--gray-600);">Use esta chave no Raspberry Pi para autenticar os envios de imagens. Guarde em local seguro.</p>
+      <div class="field-group">
+        <label>Device Key</label>
+        <div class="device-key-box" id="modal-device-key-value">—</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primary" style="width:auto;" onclick="copyDeviceKey()">Copiar Chave</button>
+      <button class="btn-secondary" onclick="closeModal('device-key')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Confirmar Exclusão -->
+<div id="modal-confirm-delete" class="modal-overlay" onclick="if(event.target===this)closeModal('confirm-delete')">
+  <div class="modal-box" style="max-width:400px">
+    <div class="modal-header"><h3>Confirmar Exclusão</h3><button onclick="closeModal('confirm-delete')">&times;</button></div>
+    <div class="modal-body"><p id="delete-confirm-msg" style="color:var(--fg);font-size:14px;margin:0;">Tem certeza que deseja excluir este item?</p></div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('confirm-delete')">Cancelar</button>
+      <button class="btn-danger" onclick="executeDelete()">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Preview de Imagem -->
+<div id="modal-image-preview" class="modal-overlay" onclick="if(event.target===this)closeModal('image-preview')">
+  <div class="modal-box" style="max-width:520px;">
+    <div class="modal-header"><h3 id="preview-modal-title">Detalhes da Imagem</h3><button onclick="closeModal('image-preview')">&times;</button></div>
+    <div class="modal-body" style="gap:12px;">
+      <div id="preview-img-wrap" style="width:100%;border-radius:10px;overflow:hidden;background:var(--gray-100);min-height:200px;display:flex;align-items:center;justify-content:center;">
+        <img id="preview-img" src="" alt="" style="width:100%;max-height:340px;object-fit:contain;display:block;">
+        <div id="preview-no-img" style="display:none;color:var(--gray-400);font-size:13px;padding:32px;">Sem preview disponível</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div style="background:var(--gray-50);border-radius:8px;padding:12px;">
+          <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px;">Estado</div>
+          <div id="preview-estado" style="font-size:14px;font-weight:700;"></div>
+        </div>
+        <div style="background:var(--gray-50);border-radius:8px;padding:12px;">
+          <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px;">Fonte</div>
+          <div id="preview-source" style="font-size:14px;font-weight:500;color:var(--fg);"></div>
+        </div>
+        <div style="background:var(--gray-50);border-radius:8px;padding:12px;">
+          <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px;">Formigueiro</div>
+          <div id="preview-pform" style="font-size:14px;font-weight:700;color:#f59e0b;"></div>
+        </div>
+      </div>
+      <div style="background:var(--gray-50);border-radius:8px;padding:12px;">
+        <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px;">Data</div>
+        <div id="preview-date" style="font-size:13px;color:var(--fg);"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('image-preview')">Fechar</button>
+      <button class="btn-danger" id="preview-trash-btn" onclick="moveToTrashFromPreview()">🗑 Mover para lixeira</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- TOAST -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.min.js"></script>
+<script>
+'use strict';
+
+// ── CONFIG ──
+const SUPABASE_URL = 'https://fsyjawaraamblhjsbrqr.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_Bv4Fr9CzrhizCqE7xcQshQ_o-Al9WYd';
+const ONNX_MODEL_PATH = 'public/model.onnx';
+const THRESH_FORM = 0.82;
+const THRESH_TRIL = 0.82;
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── STATE ──
+let currentUser = null;
+let isDark = false;
+let mapInited = false;
+let tfModel = null;
+let selectedFiles = [];
+let nestChart = null;
+let chartAllData = { form: Array(12).fill(0), tril: Array(12).fill(0), ambos: Array(12).fill(0) };
+const chartLabels = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+let pendingDelete = null;
+let editingUserId = null;
+let currentDeviceKey = '';
+let isSignUp = false;
+
+// ── NOTIFICATIONS ──
+let notifications = [];
+try { notifications = JSON.parse(localStorage.getItem('fs_notifs') || '[]'); } catch(_) {}
+
+function saveNotifs() { try { localStorage.setItem('fs_notifs', JSON.stringify(notifications.slice(0,50))); } catch(_) {} }
+
+function addNotif(title, icon = '🔍', type = 'info') {
+  notifications.unshift({ id: Date.now(), title, icon, time: new Date().toISOString(), read: false });
+  saveNotifs();
+  renderNotifPanel();
+}
+
+function renderNotifPanel() {
+  const list  = document.getElementById('notif-list');
+  const badge = document.getElementById('notif-badge');
+  if (!list) return;
+  const unread = notifications.filter(n => !n.read).length;
+  if (badge) { badge.textContent = unread; badge.style.display = unread > 0 ? 'flex' : 'none'; }
+  if (!notifications.length) { list.innerHTML = '<div class="notif-empty">Nenhuma notificação</div>'; return; }
+  list.innerHTML = notifications.map(n => `
+    <div class="notif-item${n.read ? '' : ' notif-unread'}">
+      <div class="notif-icon">${n.icon}</div>
+      <div class="notif-text">
+        <div class="notif-title">${n.title}</div>
+        <div class="notif-time">${timeAgo(n.time)}</div>
+      </div>
+    </div>`).join('');
+}
+
+function timeAgo(iso) {
+  const diff = Math.floor((Date.now() - new Date(iso)) / 1000);
+  if (diff < 60) return 'agora';
+  if (diff < 3600) return Math.floor(diff/60) + ' min atrás';
+  if (diff < 86400) return Math.floor(diff/3600) + 'h atrás';
+  return new Date(iso).toLocaleDateString('pt-BR');
+}
+
+function toggleNotifPanel() {
+  const panel = document.getElementById('notif-panel');
+  if (!panel) return;
+  const open = panel.classList.toggle('open');
+  if (open) { notifications.forEach(n => n.read = true); saveNotifs(); setTimeout(renderNotifPanel, 300); }
+  if (open) document.addEventListener('click', closeNotifOnOutside, { once: true });
+}
+
+function closeNotifOnOutside(e) {
+  const panel = document.getElementById('notif-panel');
+  const btn   = document.getElementById('notif-btn');
+  if (panel && !panel.contains(e.target) && !btn.contains(e.target)) panel.classList.remove('open');
+}
+
+function clearNotifs() { notifications = []; saveNotifs(); renderNotifPanel(); }
+
+
+// ── TOAST ──
+function toast(msg, type = 'success') {
+  const wrap = document.getElementById('toast-wrap');
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.textContent = msg;
+  wrap.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 300);
+  }, 3000);
+}
+
+// ── AUTH ──
+function togglePw() {
+  const inp = document.getElementById('input-pw');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+function toggleSignUp() {
+  isSignUp = !isSignUp;
+  document.getElementById('login-title').textContent = isSignUp ? 'Criar Conta' : 'Entrar';
+  document.getElementById('name-field').style.display = isSignUp ? 'block' : 'none';
+  document.getElementById('phone-field').style.display = isSignUp ? 'block' : 'none';
+  document.getElementById('login-btn-text').textContent = isSignUp ? 'Criar Conta' : 'Entrar';
+  document.getElementById('toggle-signup').textContent = isSignUp ? 'Já tem uma conta? Entrar' : 'Não tem conta? Criar uma';
+  document.getElementById('login-error').style.display = 'none';
+}
+
+async function handleAuth() {
+  const email = document.getElementById('input-email').value.trim();
+  const pw    = document.getElementById('input-pw').value;
+  const errEl = document.getElementById('login-error');
+  const btn   = document.getElementById('btn-login');
+
+  errEl.style.display = 'none';
+  if (!email || !pw) { showErr('Preencha todos os campos'); return; }
+  if (pw.length < 6)  { showErr('A senha deve ter no mínimo 6 caracteres'); return; }
+
+  btn.disabled = true;
+  document.getElementById('login-btn-text').textContent = isSignUp ? 'Criando conta...' : 'Entrando...';
+
+  if (isSignUp) {
+    const name = document.getElementById('input-name').value.trim();
+    if (!name) { showErr('Preencha o nome completo'); btn.disabled = false; document.getElementById('login-btn-text').textContent = 'Criar Conta'; return; }
+    const { error } = await sb.auth.signUp({ email, password: pw, options: { data: { name } } });
+    if (error) { showErr(error.message); btn.disabled = false; document.getElementById('login-btn-text').textContent = 'Criar Conta'; return; }
+    toast('Conta criada! Fazendo login...', 'success');
+    // auto-login
+    const { data, error: e2 } = await sb.auth.signInWithPassword({ email, password: pw });
+    if (e2 || !data.user) { showErr('Conta criada! Faça o login.'); btn.disabled = false; document.getElementById('login-btn-text').textContent = 'Entrar'; isSignUp = false; toggleSignUp(); return; }
+    await afterLogin(data.user);
+  } else {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
+    if (error) { showErr('E-mail ou senha incorretos.'); btn.disabled = false; document.getElementById('login-btn-text').textContent = 'Entrar'; return; }
+    await afterLogin(data.user);
+  }
+}
+
+function showErr(msg) {
+  const el = document.getElementById('login-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+  document.getElementById('btn-login').disabled = false;
+  document.getElementById('login-btn-text').textContent = isSignUp ? 'Criar Conta' : 'Entrar';
+}
+
+async function afterLogin(authUser) {
+  // wait a moment for trigger to create profile
+  await new Promise(r => setTimeout(r, 600));
+  const { data: profile, error } = await sb.from('profiles').select('*').eq('id', authUser.id).single();
+  if (error || !profile) {
+    showErr('Erro ao carregar perfil. Tente novamente.');
+    await sb.auth.signOut();
+    return;
+  }
+  if (profile.active === false) {
+    showErr('Conta desativada. Contate o administrador.');
+    await sb.auth.signOut();
+    return;
+  }
+  currentUser = { id: authUser.id, email: authUser.email, ...profile };
+  showApp();
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+  currentUser = null;
+  document.getElementById('app-screen').classList.remove('active');
+  document.getElementById('login-screen').classList.add('active');
+  document.getElementById('input-email').value = '';
+  document.getElementById('input-pw').value = '';
+  document.getElementById('btn-login').disabled = false;
+  document.getElementById('login-btn-text').textContent = 'Entrar';
+  if (isSignUp) toggleSignUp();
+  mapInited = false;
+  nestChart = null;
+  tfModel = null;
+}
+
+function showApp() {
+  document.getElementById('login-screen').classList.remove('active');
+  document.getElementById('app-screen').classList.add('active');
+  const ini = (currentUser.name || '?').split(' ').map(p => p[0]).join('').toUpperCase().slice(0,2);
+  setSidebarAvatar(ini);
+  document.getElementById('user-display-name').textContent = currentUser.name || currentUser.email;
+  document.getElementById('user-display-role').textContent = roleLabel(currentUser.role);
+  document.getElementById('dash-name').textContent = (currentUser.name || '').split(' ')[0] || '—';
+  applyRoleVisibility(currentUser.role);
+  renderNotifPanel();
+  goTo('dashboard');
+  setTimeout(updateDashboardStats, 200);
+  setupRealtime();
+}
+
+// ── REALTIME: auto-analisa imagens pendentes do RPi ──
+let realtimeChannel = null;
+function setupRealtime() {
+  if (realtimeChannel) sb.removeChannel(realtimeChannel);
+  realtimeChannel = sb.channel('detections-realtime')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'detections' },
+      async (payload) => {
+        const row = payload.new;
+        if (row.estado !== 'pendente' || !row.image_url) return;
+        toast('📡 Nova foto do Raspberry Pi — analisando...', '');
+        if (!tfModel) await loadTFModel();
+        if (!tfModel) { toast('Modelo CNN não carregado.', 'error'); return; }
+        const result = await analyzeFromUrl(row.id, row.image_url, null);
+        updateDashboardStats();
+        if (result) loadNestsOnMap();
+      })
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') console.log('[Realtime] conectado');
+      if (status === 'CHANNEL_ERROR') console.warn('[Realtime] erro na subscrição');
+    });
+}
+
+function roleLabel(r) { return { admin:'Administrador', operator:'Operador', viewer:'Visualizador' }[r] || r; }
+
+function applyRoleVisibility(role) {
+  const pages = { upload: role !== 'viewer', map: true, admin: role === 'admin' };
+  Object.entries(pages).forEach(([page, visible]) => {
+    const el = document.querySelector('[data-page="' + page + '"]');
+    if (el) el.style.display = visible ? '' : 'none';
+  });
+  const clearBtn = document.getElementById('btn-clear-detections');
+  if (clearBtn) clearBtn.style.display = role === 'admin' ? '' : 'none';
+  // Aba Imagens em Analisar só para admin
+  const imagesTab = document.getElementById('analyze-main-tab-images');
+  if (imagesTab) imagesTab.style.display = role === 'admin' ? '' : 'none';
+}
+
+function setSidebarAvatar(initials) {
+  const el = document.getElementById('user-avatar');
+  const av = localStorage.getItem('fs_avatar_' + (currentUser?.id || ''));
+  if (av) {
+    el.innerHTML = '<img src="' + av + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+  } else {
+    el.textContent = initials;
+  }
+}
+
+// ── ANALISAR MAIN TABS ──
+let selectedImageIds = new Set();
+
+function switchAnalyzeMainTab(tab, btn) {
+  document.querySelectorAll('#analyze-main-tabs .admin-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  document.getElementById('analyze-tab-mode').style.display   = tab === 'mode'   ? '' : 'none';
+  document.getElementById('analyze-tab-images').style.display = tab === 'images' ? '' : 'none';
+  if (tab === 'images') {
+    selectedImageIds.clear();
+    updateBulkDeleteBtn();
+    loadAdminData();
+  }
+}
+
+function renderAnalyzeImages() {
+  const list = document.getElementById('analyze-images-list');
+  if (!list) return;
+  const pendingCount = adminCache.images.filter(i => i.estado === 'pendente').length;
+  const pendingBtn = document.getElementById('btn-analyze-pending2');
+  if (pendingBtn) pendingBtn.style.display = pendingCount > 0 ? '' : 'none';
+  document.getElementById('analyze-images-count').textContent = 'Imagens (' + adminCache.images.length + ')' + (pendingCount ? ' · ' + pendingCount + ' pendente(s)' : '');
+  if (!adminCache.images.length) { list.innerHTML = emptyState('Nenhuma imagem'); updateBulkDeleteBtn(); return; }
+  const stateLabel = { formigueiro:'Formigueiro', trilha:'Trilha', ambos:'Ambos', nao_tem:'Não Possui', pendente:'Pendente' };
+  const noThumb = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" width="18" height="18"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
+  list.innerHTML = adminCache.images.map(img => {
+    const thumbSrc = img.thumbnail || img.image_url;
+    const isPending = img.estado === 'pendente';
+    const safeName  = (img.image_name || '').replace(/'/g,"\\'");
+    const isSelected = selectedImageIds.has(img.id);
+    const hasNest = img.estado === 'formigueiro' || img.estado === 'ambos';
+    let badges = '';
+    if (hasNest)   badges += `<span style="background:#ef4444;color:#fff;padding:1px 6px;border-radius:99px;font-size:10px;font-weight:600;margin-right:3px;">🐜 Formigueiro</span>`;
+    if (img.estado === 'nao_tem') badges += `<span style="background:#94a3b8;color:#fff;padding:1px 6px;border-radius:99px;font-size:10px;font-weight:600;">✗ Não Possui</span>`;
+    if (isPending) badges += `<span style="background:#94a3b8;color:#fff;padding:1px 6px;border-radius:99px;font-size:10px;font-weight:600;">Pendente</span>`;
+    return `<div class="admin-row" id="img-row-${img.id}" style="${isSelected ? 'background:var(--green-50);' : ''}">
+      <label style="cursor:pointer;padding:4px;flex-shrink:0;display:flex;align-items:center;" onclick="event.stopPropagation()">
+        <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleImageSelection(${img.id},this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:var(--green-500);">
+      </label>
+      <div style="width:56px;height:44px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--gray-100);cursor:pointer;" onclick="openImagePreview(${img.id})">
+        ${thumbSrc ? `<img src="${thumbSrc}" style="width:100%;height:100%;object-fit:cover;" crossorigin="anonymous">` : noThumb}
+      </div>
+      <div class="admin-row-info" style="cursor:pointer;" onclick="openImagePreview(${img.id})">
+        <div class="row-name">${img.image_name || 'Sem nome'}</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px;">${badges}</div>
+        <div class="row-sub" style="margin-top:2px;">${new Date(img.created_at).toLocaleDateString('pt-BR')}${img.device_id ? ' · 📡 RPi' : ''}</div>
+      </div>
+      <div class="admin-row-actions" onclick="event.stopPropagation()">
+        ${isPending && img.image_url ? `<button class="btn-icon" id="abtn2-${img.id}" onclick="analyzeFromUrl(${img.id},'${img.image_url}',this)" style="color:var(--green-600);border-color:var(--green-300);">⚡ Analisar</button>` : ''}
+        <button class="btn-icon danger" onclick="moveToTrash(${img.id},'${safeName}')">🗑 Lixeira</button>
+      </div>
+    </div>`;
+  }).join('');
+  updateBulkDeleteBtn();
+}
+
+function toggleImageSelection(id, checked) {
+  if (checked) selectedImageIds.add(id);
+  else selectedImageIds.delete(id);
+  const row = document.getElementById('img-row-' + id);
+  if (row) row.style.background = checked ? 'var(--green-50)' : '';
+  updateBulkDeleteBtn();
+}
+
+function updateBulkDeleteBtn() {
+  const btn = document.getElementById('btn-delete-selected');
+  if (!btn) return;
+  const count = selectedImageIds.size;
+  btn.style.display = count > 0 ? '' : 'none';
+  btn.textContent = '🗑 Apagar ' + count + ' selecionada' + (count !== 1 ? 's' : '');
+  const chkAll = document.getElementById('check-all-images');
+  if (chkAll) {
+    const total = adminCache.images.length;
+    chkAll.checked = total > 0 && count === total;
+    chkAll.indeterminate = count > 0 && count < total;
+  }
+}
+
+function toggleSelectAll(checked) {
+  adminCache.images.forEach(img => {
+    if (checked) selectedImageIds.add(img.id);
+    else selectedImageIds.delete(img.id);
+    const row = document.getElementById('img-row-' + img.id);
+    if (row) row.style.background = checked ? 'var(--green-50)' : '';
+    const cb = row?.querySelector('input[type=checkbox]');
+    if (cb) cb.checked = checked;
+  });
+  updateBulkDeleteBtn();
+}
+
+async function deleteSelectedImages() {
+  if (!selectedImageIds.size) return;
+  const count = selectedImageIds.size;
+  if (!confirm('Mover ' + count + ' imagem(ns) para a lixeira?')) return;
+  const ids = [...selectedImageIds];
+  const { error } = await sb.from('detections').update({ trashed: true, trashed_at: new Date().toISOString() }).in('id', ids);
+  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+  selectedImageIds.clear();
+  toast(count + ' imagem(ns) movida(s) para a lixeira.', 'success');
+  await loadAdminData();
+}
+
+// ── UPLOAD PAGE TABS ──
+function switchUploadTab(tab, el) {
+  document.getElementById('upload-tab-upload').style.display = tab === 'upload' ? '' : 'none';
+  document.getElementById('upload-tab-rasp').style.display   = tab === 'rasp'   ? '' : 'none';
+  document.querySelectorAll('#page-upload .admin-tab').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  if (tab === 'rasp') loadRaspPending();
+}
+
+// ── NAVIGATION ──
+function goTo(page) {
+  const role = currentUser?.role || 'viewer';
+  if (page === 'admin'  && role !== 'admin')    return;
+  if (page === 'upload' && role === 'viewer')   return;
+
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  const ni = document.querySelector('[data-page="' + page + '"]');
+  if (ni) ni.classList.add('active');
+  closeSidebar();
+
+  const msb = document.getElementById('model-status-bar');
+  if (msb) msb.classList.toggle('visible', page === 'upload');
+
+  if (page === 'dashboard') setTimeout(updateDashboardStats, 50);
+  if (page === 'upload')    setTimeout(loadTFModel, 100);
+  if (page === 'map')       setTimeout(initMap, 100);
+  if (page === 'settings')  setTimeout(initSettingsPage, 50);
+  if (page === 'admin')     setTimeout(loadAdminData, 50);
+}
+
+// ── SIDEBAR ──
+function openSidebar()  { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebar-overlay').classList.add('open'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebar-overlay').classList.remove('open'); }
+
+// ── THEME ──
+function toggleTheme() {
+  isDark = !isDark;
+  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  document.getElementById('theme-icon-sun').style.display  = isDark ? 'none' : 'block';
+  document.getElementById('theme-icon-moon').style.display = isDark ? 'block' : 'none';
+  document.getElementById('theme-label').textContent = isDark ? 'Modo Claro' : 'Modo Noturno';
+  document.getElementById('settings-theme-label').textContent = isDark ? 'Modo Noturno' : 'Modo Claro';
+  const sw = document.getElementById('theme-switch');
+  isDark ? sw.classList.add('on') : sw.classList.remove('on');
+  const loginLogo = document.getElementById('login-logo');
+  if (loginLogo) loginLogo.src = isDark ? 'public/logo-dark.png' : 'public/logo-light.png';
+  try { localStorage.setItem('fs_theme', isDark ? 'dark' : 'light'); } catch(e) {}
+}
+
+// ── DASHBOARD ──
+async function updateDashboardStats() {
+  try {
+    const [{ count: analyzedCount }, { data: nests }, { count: naoTemCount }, { count: todayCount }] = await Promise.all([
+      sb.from('detections').select('*', { count:'exact', head:true }).eq('trashed',false).neq('estado','pendente'),
+      sb.from('detections').select('id,estado').eq('estado','formigueiro').eq('trashed',false),
+      sb.from('detections').select('*',{count:'exact',head:true}).eq('trashed',false).eq('estado','nao_tem'),
+      sb.from('detections').select('*',{count:'exact',head:true}).eq('trashed',false).gte('created_at', new Date().toISOString().split('T')[0]),
+    ]);
+
+    const el = (id, v) => { const e = document.getElementById(id); if(e) e.textContent = v; };
+    el('stat-images', naoTemCount ?? 0);
+    el('stat-nests',  nests?.length ?? 0);
+    el('stat-users',  analyzedCount ?? 0);
+    el('stat-today',  todayCount ?? 0);
+
+    await loadChartData();
+  } catch(e) { console.error(e); }
+}
+
+async function loadChartData() {
+  try {
+    const { data } = await sb.from('detections').select('created_at,estado').in('estado',['formigueiro','nao_tem']).eq('trashed',false);
+    const form = Array(12).fill(0), naoTem = Array(12).fill(0);
+    data?.forEach(d => {
+      const m = new Date(d.created_at).getMonth();
+      if (d.estado === 'formigueiro') form[m]++;
+      else if (d.estado === 'nao_tem') naoTem[m]++;
+    });
+    chartAllData = { form, naoTem };
+    initDashboardChart(chartAllData);
+  } catch(e) {}
+}
+
+function initDashboardChart(data) {
+  const ctx = document.getElementById('nest-chart');
+  if (!ctx) return;
+  if (nestChart) {
+    nestChart.data.datasets[0].data = [...data.form];
+    nestChart.data.datasets[1].data = [...data.naoTem];
+    nestChart.update();
+    return;
+  }
+  nestChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: [...chartLabels],
+      datasets: [
+        { label:'Formigueiros', data: [...data.form],   backgroundColor:'rgba(245,158,11,0.7)', borderColor:'rgba(245,158,11,1)', borderWidth:1, borderRadius:4, borderSkipped:false },
+        { label:'Não Possui',   data: [...data.naoTem], backgroundColor:'rgba(148,163,184,0.7)', borderColor:'rgba(148,163,184,1)', borderWidth:1, borderRadius:4, borderSkipped:false }
+      ]
+    },
+    options: {
+      responsive:true,
+      plugins:{
+        legend:{ display:true, position:'top', labels:{ boxWidth:12, padding:16, font:{size:12} } },
+        tooltip:{ callbacks:{ label: c => ' '+c.parsed.y+' '+c.dataset.label.toLowerCase() } }
+      },
+      scales:{
+        y:{ beginAtZero:true, ticks:{stepSize:1,color:'#6b7a6b'}, grid:{color:'rgba(0,0,0,0.06)'} },
+        x:{ ticks:{color:'#6b7a6b'}, grid:{display:false} }
+      }
+    }
+  });
+}
+
+function filterChart() {
+  if (!nestChart) return;
+  const val = document.getElementById('chart-month-filter').value;
+  if (val === 'all') {
+    nestChart.data.labels = chartLabels;
+    nestChart.data.datasets[0].data = [...chartAllData.form];
+    nestChart.data.datasets[1].data = [...chartAllData.naoTem];
+  } else {
+    const idx = parseInt(val);
+    nestChart.data.labels = [chartLabels[idx]];
+    nestChart.data.datasets[0].data = [chartAllData.form[idx]];
+    nestChart.data.datasets[1].data = [chartAllData.naoTem[idx]];
+  }
+  nestChart.update();
+}
+
+let dashboardImages = [];
+
+async function renderImageHistory() {
+  try {
+    const { data } = await sb.from('detections').select('*').eq('trashed',false).order('created_at',{ascending:false}).limit(50);
+    const grid = document.getElementById('image-history-grid');
+    if (!grid) return;
+    if (!data?.length) {
+      dashboardImages = [];
+      grid.innerHTML = '<div style="text-align:center;padding:32px;color:var(--gray-400);font-size:13px;">Nenhuma imagem analisada ainda.</div>';
+      return;
+    }
+    dashboardImages = data;
+    grid.innerHTML = '';
+    const stateLabel = { formigueiro:'Formigueiro', trilha:'Trilha', ambos:'Ambos', nao_tem:'Não Possui', pendente:'Pendente' };
+    const noThumb = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:20px;">🖼</div>`;
+    data.forEach(img => {
+      const hasNest = img.estado === 'formigueiro' || img.estado === 'ambos';
+      let badges = '';
+      if (hasNest)              badges += `<span style="background:#ef4444;color:#fff;padding:2px 7px;border-radius:99px;font-size:11px;font-weight:600;margin-right:4px;">🐜 Formigueiro</span>`;
+      if (img.estado==='nao_tem') badges += `<span style="background:#94a3b8;color:#fff;padding:2px 7px;border-radius:99px;font-size:11px;font-weight:600;">✗ Não Possui</span>`;
+
+      const row = document.createElement('div');
+      row.className = 'admin-row';
+      row.style.cssText = 'cursor:pointer;animation:fadeIn 0.3s ease;';
+      row.onclick = () => openDetectionPreview(img);
+      row.innerHTML =
+        `<div style="width:64px;height:48px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--gray-100);">` +
+        (img.thumbnail ? `<img src="${img.thumbnail}" style="width:100%;height:100%;object-fit:cover;">` : noThumb) +
+        `</div>` +
+        `<div class="admin-row-info">` +
+        `<div class="row-name" title="${img.image_name||''}">${img.image_name||'Sem nome'}</div>` +
+        `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">${badges}</div>` +
+        `<div class="row-sub" style="margin-top:2px;">${new Date(img.created_at).toLocaleString('pt-BR')}${img.device_id?' · 📡 RPi':''}</div>` +
+        `</div>` +
+        `<svg viewBox="0 0 24 24" fill="none" stroke="var(--gray-300)" stroke-width="2" width="16" height="16" style="flex-shrink:0;"><path d="M9 18l6-6-6-6"/></svg>`;
+      grid.appendChild(row);
+    });
+  } catch(e) { console.error(e); }
+}
+
+async function clearImageHistory() {
+  if (!confirm('Apagar todo o histórico de imagens do banco?')) return;
+  const { error } = await sb.from('detections').delete().neq('id', 0);
+  if (error) { toast('Erro ao limpar: ' + error.message, 'error'); return; }
+  toast('Histórico apagado.', 'success');
+  updateDashboardStats();
+}
+
+// ── ONNX RUNTIME ──
+async function loadTFModel() {
+  const dot  = document.getElementById('model-dot');
+  const text = document.getElementById('model-status-text');
+  if (tfModel) return;
+  dot.className = 'model-dot loading';
+  text.textContent = 'Carregando CNN...';
+  try {
+    if (typeof ort === 'undefined') throw new Error('ONNX Runtime não carregou');
+    ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/';
+    tfModel = await ort.InferenceSession.create(ONNX_MODEL_PATH, { executionProviders: ['wasm'] });
+    dot.className = 'model-dot ready';
+    text.textContent = 'CNN pronto (94%)';
+  } catch(err) {
+    dot.className = 'model-dot error';
+    text.textContent = 'Modelo não encontrado';
+    tfModel = null;
+  }
+}
+
+function cnnStateLabel(pF, pT) {
+  return pF >= THRESH_FORM ? 'formigueiro' : 'nao_tem';
+}
+function cnnStatePtBR(s) { return { formigueiro:'Formigueiro', trilha:'Trilha', ambos:'Ambos', nao_tem:'Não Possui' }[s]; }
+
+const dropZone = document.getElementById('drop-zone');
+dropZone?.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.borderColor = 'var(--green-400)'; dropZone.style.background = 'var(--green-50)'; });
+dropZone?.addEventListener('dragleave', () => { dropZone.style.borderColor = ''; dropZone.style.background = ''; });
+dropZone?.addEventListener('drop', e => { e.preventDefault(); dropZone.style.borderColor = ''; dropZone.style.background = ''; handleFileSelect({ target: { files: e.dataTransfer.files } }); });
+
+function handleFileSelect(ev) {
+  const files = Array.from(ev.target.files).filter(f => f.type.startsWith('image/'));
+  if (!files.length) return;
+  selectedFiles = selectedFiles.concat(files);
+  renderFileGrid();
+}
+
+function clearFiles() {
+  selectedFiles = [];
+  document.getElementById('upload-preview').style.display = 'none';
+  document.getElementById('file-input').value = '';
+}
+
+function renderFileGrid() {
+  const preview  = document.getElementById('upload-preview');
+  const grid     = document.getElementById('file-grid');
+  const countEl  = document.getElementById('file-count');
+  preview.style.display = 'block';
+  countEl.textContent = selectedFiles.length + ' arquivo(s) selecionado(s)';
+  grid.innerHTML = '';
+  selectedFiles.forEach((file, i) => {
+    const card = document.createElement('div');
+    card.className = 'file-card';
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(file);
+    img.alt = file.name;
+    img.style.cssText = 'width:100%;height:120px;object-fit:cover;display:block;';
+    card.appendChild(img);
+    const info = document.createElement('div');
+    info.className = 'file-info';
+    info.innerHTML = '<div class="file-name">' + file.name + '</div><div id="cnn-result-'+i+'" style="margin-top:6px;"><div style="font-size:12px;color:var(--gray-400);">Aguardando análise...</div></div>';
+    card.appendChild(info);
+    grid.appendChild(card);
+  });
+}
+
+function renderCNNResult(idx, pF, pT) {
+  const container = document.getElementById('cnn-result-' + idx);
+  if (!container) return;
+  const state = cnnStateLabel(pF, pT);
+  const fPct = Math.round(pF * 100), tPct = Math.round(pT * 100);
+  const fColor = pF >= THRESH_FORM ? '#f59e0b' : 'var(--gray-300)';
+  const tColor = pT >= THRESH_TRIL ? '#3b82f6' : 'var(--gray-300)';
+  container.innerHTML =
+    '<span class="cnn-state-badge '+state+'">'+cnnStatePtBR(state)+'</span>' +
+    '<div class="conf-row"><span style="min-width:70px;font-size:10px;">Formigueiro</span><div class="conf-bar-wrap"><div class="conf-bar-fill" style="width:'+fPct+'%;background:'+fColor+';"></div></div><span class="conf-pct">'+fPct+'%</span></div>';
+}
+
+async function analyzeImageFile(file) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = async ev => {
+      try {
+        const imgEl = new Image();
+        imgEl.onload = async () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 224; canvas.height = 224;
+            canvas.getContext('2d').drawImage(imgEl, 0, 0, 224, 224);
+            const { data } = canvas.getContext('2d').getImageData(0, 0, 224, 224);
+            const float32 = new Float32Array(1 * 224 * 224 * 3);
+            // Modelo já tem preprocess_input interno (camada subtract) — enviar [0, 255] bruto
+            for (let i = 0; i < 224 * 224; i++) {
+              float32[i * 3]     = data[i * 4];
+              float32[i * 3 + 1] = data[i * 4 + 1];
+              float32[i * 3 + 2] = data[i * 4 + 2];
+            }
+            const inputName  = tfModel.inputNames[0];
+            const outputName = tfModel.outputNames[0];
+            const tensor = new ort.Tensor('float32', float32, [1, 224, 224, 3]);
+            const results = await tfModel.run({ [inputName]: tensor });
+            const out = results[outputName].data;
+            resolve({ pForm: out[0], pTril: out[1] });
+          } catch(e) { console.error(e); resolve(null); }
+        };
+        imgEl.onerror = () => resolve(null);
+        imgEl.src = ev.target.result;
+      } catch(e) { console.error(e); resolve(null); }
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function runCNNAnalysis() {
+  if (!tfModel) { toast('Modelo não carregado. Verifique o status acima.', 'error'); return; }
+  const btn = document.getElementById('btn-analyze');
+  btn.disabled = true; btn.textContent = 'Analisando...';
+  const total = selectedFiles.length;
+
+  let detectedNests = 0;
+  for (let i = 0; i < total; i++) {
+    const el = document.getElementById('cnn-result-' + i);
+    if (el) el.innerHTML = '<div style="font-size:12px;color:var(--warning);">Processando...</div>';
+    const result = await analyzeImageFile(selectedFiles[i]);
+    if (result) {
+      renderCNNResult(i, result.pForm, result.pTril);
+      await saveDetection(selectedFiles[i], result.pForm, result.pTril);
+      const estado = cnnStateLabel(result.pForm, result.pTril);
+      if (estado === 'formigueiro' || estado === 'ambos') detectedNests++;
+    } else {
+      if (el) el.innerHTML = '<div style="font-size:12px;color:#ef4444;">Erro ao processar</div>';
+    }
+  }
+  btn.disabled = false; btn.textContent = 'Analisar com IA';
+  toast('Análise concluída!', 'success');
+  if (detectedNests > 0) {
+    addNotif(detectedNests + ' formigueiro(s) detectado(s) em ' + total + ' imagem(ns)', '🐜');
+  } else {
+    addNotif('Análise concluída — ' + total + ' imagem(ns) processada(s), nenhum formigueiro', '✅');
+  }
+}
+
+async function saveDetection(file, pForm, pTril) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = async () => {
+        const MAX = 320;
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        const thumb = canvas.toDataURL('image/jpeg', 0.75);
+        const estado = cnnStateLabel(pForm, pTril);
+        await sb.from('detections').insert({
+          user_id: currentUser.id,
+          image_name: file.name,
+          thumbnail: thumb,
+          estado,
+          p_formigueiro: pForm,
+          p_trilha: pTril,
+          source: 'manual'
+        });
+        resolve();
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// ── MAP ──
+function initMap() {
+  if (mapInited) { window.leafletMap?.invalidateSize(); loadNestsOnMap(); return; }
+  const map = L.map('leaflet-map').setView([-15.7935, -47.8826], 6);
+  window.leafletMap = map;
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+    attribution: '&copy; Esri', maxZoom: 17
+  }).addTo(map);
+  const cluster = L.markerClusterGroup({ spiderfyOnMaxZoom: true, showCoverageOnHover: false, maxClusterRadius: 50 });
+  map.addLayer(cluster);
+  window.markerCluster = cluster;
+  mapInited = true;
+  loadNestsOnMap();
+}
+
+function getRiskLevel(estado) {
+  if (estado === 'trilha' || estado === 'ambos') return { label: '⚠ Alerta Extremo', color: '#ef4444', bg: '#fef2f2' };
+  if (estado === 'formigueiro') return { label: 'Médio / Escalável', color: '#f59e0b', bg: '#fffbeb' };
+  if (estado === 'nao_tem') return { label: 'Sem detecção', color: '#94a3b8', bg: '#f8fafc' };
+  return { label: 'Baixo', color: '#22c55e', bg: '#f0fdf4' };
+}
+
+function createMapMarker(estado) {
+  let color;
+  if (estado === 'trilha') color = '#ef4444';
+  else if (estado === 'ambos') color = '#dc2626';
+  else if (estado === 'formigueiro') color = '#f59e0b';
+  else if (estado === 'nao_tem') color = '#94a3b8';
+  else color = '#22c55e';
+  return L.divIcon({
+    html: `<div style="width:18px;height:18px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.4);"></div>`,
+    className: '',
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+    popupAnchor: [0, -12]
+  });
+}
+
+async function loadNestsOnMap() {
+  try {
+    const map = window.leafletMap;
+    const cluster = window.markerCluster;
+    if (cluster) cluster.clearLayers();
+    const countEl = document.getElementById('map-count-sub');
+
+    const { data } = await sb.from('detections').select('*').eq('trashed',false).not('lat','is',null).eq('estado','formigueiro');
+
+    if (!data?.length) {
+      if (countEl) countEl.textContent = '0 detecção(ões) no mapa';
+      return;
+    }
+
+    if (countEl) countEl.textContent = data.length + ' detecção(ões) no mapa';
+
+    const stateLabel = { formigueiro:'Formigueiro', trilha:'Trilha', ambos:'Ambos', nao_tem:'Não Possui' };
+
+    data.forEach(n => {
+      const thumbHtml = n.thumbnail ? `<img src="${n.thumbnail}" style="width:100%;height:110px;object-fit:cover;border-radius:6px;margin-bottom:8px;display:block;">` : '';
+      const nestLabel = stateLabel[n.estado] || n.estado;
+      const hasTrail = n.estado === 'trilha' || n.estado === 'ambos';
+      const hasNest  = n.estado === 'formigueiro' || n.estado === 'ambos';
+      const risk = getRiskLevel(n.estado);
+      let badgeHtml = '';
+      if (hasNest)  badgeHtml += `<span style="background:#f59e0b;color:#fff;padding:2px 6px;border-radius:99px;font-size:11px;font-weight:600;margin-right:3px;">🐜</span>`;
+      if (hasTrail) badgeHtml += `<span style="background:#ef4444;color:#fff;padding:2px 6px;border-radius:99px;font-size:11px;font-weight:600;">〰</span>`;
+      if (!hasNest && !hasTrail) badgeHtml = `<span style="background:#22c55e;color:#fff;padding:2px 6px;border-radius:99px;font-size:11px;font-weight:600;">✓</span>`;
+      const popupContent = `<div style="min-width:185px;font-family:inherit;">
+        ${thumbHtml}
+        <div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;">${badgeHtml}<strong style="font-size:13px;">${nestLabel}</strong></div>
+        <div style="background:${risk.bg};border:1px solid ${risk.color}40;border-radius:6px;padding:5px 8px;margin-bottom:6px;">
+          <div style="font-size:11px;font-weight:700;color:${risk.color};">Nível de Risco</div>
+          <div style="font-size:12px;font-weight:600;color:${risk.color};">${risk.label}</div>
+        </div>
+        <div style="font-size:12px;color:#6b7280;margin-bottom:2px;">📍 ${n.lat.toFixed(6)}, ${n.lng.toFixed(6)}</div>
+        <div style="font-size:12px;color:#6b7280;margin-bottom:4px;">📅 ${new Date(n.created_at).toLocaleDateString('pt-BR')}</div>
+        ${n.p_formigueiro != null ? `<div style="font-size:11px;color:#6b7280;">Formigueiro: ${Math.round(n.p_formigueiro*100)}% · Trilha: ${Math.round((n.p_trilha||0)*100)}%</div>` : ''}
+      </div>`;
+      const marker = L.marker([n.lat, n.lng], { icon: createMapMarker(n.estado) }).bindPopup(popupContent, { maxWidth: 230 });
+      if (cluster) cluster.addLayer(marker); else marker.addTo(map);
+    });
+  } catch(e) { console.error(e); }
+}
+
+// ── SETTINGS ──
+function initSettingsPage() {
+  if (!currentUser) return;
+  document.getElementById('settings-name-display').textContent  = currentUser.name || '—';
+  document.getElementById('settings-email-display').textContent = currentUser.email || '—';
+  const roleMap = { admin:'Administrador', operator:'Operador', viewer:'Visualizador' };
+  const roleClassMap = { admin:'badge-admin', operator:'badge-operator', viewer:'badge-viewer' };
+  const badge = document.getElementById('settings-role-badge');
+  badge.textContent = roleMap[currentUser.role] || currentUser.role;
+  badge.className = 'badge ' + (roleClassMap[currentUser.role] || '');
+  document.getElementById('settings-input-name').value  = currentUser.name  || '';
+  document.getElementById('settings-input-phone').value = currentUser.phone || '';
+  // avatar
+  const circle = document.getElementById('settings-avatar-circle');
+  const ini = (currentUser.name || '?').split(' ').map(p=>p[0]).join('').toUpperCase().slice(0,2);
+  const av = localStorage.getItem('fs_avatar_' + currentUser.id);
+  if (av) { circle.innerHTML = '<img src="'+av+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">'; }
+  else    { circle.textContent = ini; circle.style.display = 'flex'; }
+}
+
+function handleAvatarUpload(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const b64 = ev.target.result;
+    try { localStorage.setItem('fs_avatar_' + currentUser.id, b64); } catch(_) {}
+    const circle = document.getElementById('settings-avatar-circle');
+    circle.innerHTML = '<img src="'+b64+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+    setSidebarAvatar('');
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeAvatar() {
+  try { localStorage.removeItem('fs_avatar_' + currentUser.id); } catch(_) {}
+  const circle = document.getElementById('settings-avatar-circle');
+  const ini = (currentUser.name || '?').split(' ').map(p=>p[0]).join('').toUpperCase().slice(0,2);
+  circle.innerHTML = ini;
+  setSidebarAvatar(ini);
+}
+
+async function saveProfileSettings() {
+  const name  = document.getElementById('settings-input-name').value.trim();
+  const phone = document.getElementById('settings-input-phone').value.trim();
+  const msgEl = document.getElementById('settings-profile-msg');
+  if (!name) { msgEl.style.color='var(--danger)'; msgEl.textContent='Nome é obrigatório.'; msgEl.style.display='block'; return; }
+  const { error } = await sb.from('profiles').update({ name, phone, updated_at: new Date().toISOString() }).eq('id', currentUser.id);
+  if (error) { msgEl.style.color='var(--danger)'; msgEl.textContent='Erro: '+error.message; msgEl.style.display='block'; return; }
+  currentUser.name = name; currentUser.phone = phone;
+  document.getElementById('user-display-name').textContent = name;
+  document.getElementById('dash-name').textContent = name.split(' ')[0];
+  document.getElementById('settings-name-display').textContent = name;
+  msgEl.style.color='var(--green-600)'; msgEl.textContent='Perfil atualizado!'; msgEl.style.display='block';
+  setTimeout(() => { msgEl.style.display='none'; }, 3000);
+  toast('Perfil salvo.', 'success');
+}
+
+async function savePasswordSettings() {
+  const newPw   = document.getElementById('settings-pw-new').value;
+  const confirm = document.getElementById('settings-pw-confirm').value;
+  const msgEl   = document.getElementById('settings-pw-msg');
+  if (!newPw || !confirm) { msgEl.style.color='var(--danger)'; msgEl.textContent='Preencha todos os campos.'; msgEl.style.display='block'; return; }
+  if (newPw.length < 6)   { msgEl.style.color='var(--danger)'; msgEl.textContent='Mínimo 6 caracteres.'; msgEl.style.display='block'; return; }
+  if (newPw !== confirm)  { msgEl.style.color='var(--danger)'; msgEl.textContent='Senhas não coincidem.'; msgEl.style.display='block'; return; }
+  const { error } = await sb.auth.updateUser({ password: newPw });
+  if (error) { msgEl.style.color='var(--danger)'; msgEl.textContent='Erro: '+error.message; msgEl.style.display='block'; return; }
+  document.getElementById('settings-pw-new').value = '';
+  document.getElementById('settings-pw-confirm').value = '';
+  msgEl.style.color='var(--green-600)'; msgEl.textContent='Senha alterada!'; msgEl.style.display='block';
+  setTimeout(() => { msgEl.style.display='none'; }, 3000);
+  toast('Senha alterada.', 'success');
+}
+
+// ── ADMIN ──
+let adminCache = { users:[], nests:[], images:[], devices:[], trash:[] };
+let previewingId = null;
+
+async function loadAdminData() {
+  try {
+    const [u, n, i, d, t] = await Promise.all([
+      sb.from('profiles').select('*').order('created_at'),
+      sb.from('detections').select('*').in('estado',['formigueiro','ambos']).eq('trashed',false).order('created_at',{ascending:false}),
+      sb.from('detections').select('*').eq('trashed',false).in('estado',['formigueiro','pendente']).order('created_at',{ascending:false}).limit(200),
+      sb.from('raspberry_devices').select('*').order('created_at'),
+      sb.from('detections').select('*').eq('trashed',true).order('trashed_at',{ascending:false}),
+    ]);
+    adminCache.users   = u.data || [];
+    adminCache.nests   = n.data || [];
+    adminCache.images  = i.data || [];
+    adminCache.devices = d.data || [];
+    adminCache.trash   = t.data || [];
+    renderAdminUsers();
+    renderAdminDevices();
+    renderAdminTrash();
+    renderAnalyzeImages();
+  } catch(e) { toast('Erro ao carregar dados admin.', 'error'); }
+}
+
+function renderAdminUsers() {
+  const list = document.getElementById('admin-users-list');
+  document.getElementById('admin-users-count').textContent = 'Usuários (' + adminCache.users.length + ')';
+  if (!adminCache.users.length) { list.innerHTML = emptyState('Nenhum usuário cadastrado'); return; }
+  const roleMap = { admin:'Administrador', operator:'Operador', viewer:'Visualizador' };
+  const rClass  = { admin:'badge-admin', operator:'badge-operator', viewer:'badge-viewer' };
+  list.innerHTML = adminCache.users.map(u => {
+    const ini = (u.name||'?').split(' ').map(p=>p[0]).join('').toUpperCase().slice(0,2);
+    const av  = localStorage.getItem('fs_avatar_' + u.id);
+    const avatarHtml = av ? `<img src="${av}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;">` : `<div class="avatar" style="flex-shrink:0;font-size:13px;">${ini}</div>`;
+    return `<div class="admin-row">
+      ${avatarHtml}
+      <div class="admin-row-info"><div class="row-name">${u.name||'—'}</div><div class="row-sub">${u.id === currentUser.id ? '<strong>Você</strong> · ' : ''}${u.phone||'—'}</div></div>
+      <span class="badge ${rClass[u.role]||''}">${roleMap[u.role]||u.role}</span>
+      <div class="admin-row-actions">
+        <button class="btn-icon" onclick="openEditUser('${u.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Editar</button>
+        ${u.id !== currentUser.id ? `<button class="btn-icon danger" onclick="confirmDeleteUser('${u.id}','${u.name||u.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg> Excluir</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderAdminNests() {
+  const list = document.getElementById('admin-nests-list');
+  document.getElementById('admin-nests-count').textContent = 'Formigueiros (' + adminCache.nests.length + ')';
+  if (!adminCache.nests.length) { list.innerHTML = emptyState('Nenhum formigueiro detectado'); return; }
+  list.innerHTML = adminCache.nests.map(n => `
+    <div class="admin-row">
+      <div style="width:36px;height:36px;background:var(--green-100);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--green-600)" stroke-width="2" width="18" height="18"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      </div>
+      <div class="admin-row-info"><div class="row-name">${n.image_name}</div><div class="row-sub">Conf: ${Math.round(n.p_formigueiro*100)}% · ${new Date(n.created_at).toLocaleDateString('pt-BR')} · ${n.source}</div></div>
+      <div class="admin-row-actions"><button class="btn-icon danger" onclick="confirmDeleteNest(${n.id},'${n.image_name}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg> Excluir</button></div>
+    </div>`).join('');
+}
+
+function renderAdminImages() {
+  const list = document.getElementById('admin-images-list');
+  const pendingCount = adminCache.images.filter(i => i.estado === 'pendente').length;
+  const pendingBtn = document.getElementById('btn-analyze-pending');
+  if (pendingBtn) pendingBtn.style.display = pendingCount > 0 ? '' : 'none';
+  document.getElementById('admin-images-count').textContent = 'Imagens (' + adminCache.images.length + ')' + (pendingCount ? ' · ' + pendingCount + ' pendente(s)' : '');
+  if (!adminCache.images.length) { list.innerHTML = emptyState('Nenhuma imagem'); return; }
+  const stateColors = { formigueiro:'#ef4444', trilha:'#3b82f6', ambos:'#ef4444', nao_tem:'#94a3b8', pendente:'#94a3b8' };
+  const stateLabel  = { formigueiro:'Formigueiro', trilha:'Trilha', ambos:'Ambos', nao_tem:'Não Possui', pendente:'Pendente' };
+  const noThumb = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" width="18" height="18"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
+  list.innerHTML = adminCache.images.map(img => {
+    const thumbSrc = img.thumbnail || img.image_url;
+    const isPending = img.estado === 'pendente';
+    const safeName = (img.image_name || '').replace(/'/g,"\\'");
+    return `
+    <div class="admin-row" style="cursor:pointer;" onclick="openImagePreview(${img.id})">
+      <div style="width:44px;height:44px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--gray-100);">
+        ${thumbSrc ? `<img src="${thumbSrc}" style="width:100%;height:100%;object-fit:cover;" crossorigin="anonymous">` : noThumb}
+      </div>
+      <div class="admin-row-info">
+        <div class="row-name">${img.image_name || 'Sem nome'}</div>
+        <div class="row-sub">${new Date(img.created_at).toLocaleDateString('pt-BR')} · <span style="color:${stateColors[img.estado]||'#94a3b8'};font-weight:600;">${stateLabel[img.estado]||img.estado}</span>${img.device_id ? ' · ' + img.device_id : ''}</div>
+      </div>
+      <div class="admin-row-actions" onclick="event.stopPropagation()">
+        ${isPending && img.image_url ? `<button class="btn-icon" id="abtn-${img.id}" onclick="analyzeFromUrl(${img.id},'${img.image_url}',this)" style="color:var(--green-600);border-color:var(--green-300);">⚡ Analisar</button>` : ''}
+        <button class="btn-icon danger" onclick="moveToTrash(${img.id},'${safeName}')">🗑 Lixeira</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderAdminTrash() {
+  const list    = document.getElementById('admin-trash-list');
+  const count   = adminCache.trash.length;
+  const badge   = document.getElementById('trash-badge');
+  document.getElementById('admin-trash-count').textContent = 'Lixeira (' + count + ')';
+  if (badge) { badge.textContent = count; badge.style.display = count > 0 ? 'inline' : 'none'; }
+  if (!count) { list.innerHTML = emptyState('Lixeira vazia'); return; }
+  const stateColors = { formigueiro:'#ef4444', trilha:'#3b82f6', ambos:'#ef4444', nao_tem:'#94a3b8' };
+  const stateLabel  = { formigueiro:'Formigueiro', trilha:'Trilha', ambos:'Ambos', nao_tem:'Não Possui' };
+  list.innerHTML = adminCache.trash.map(img => `
+    <div class="admin-row" style="opacity:.75;">
+      <div style="width:44px;height:44px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--gray-100);">
+        ${img.thumbnail ? `<img src="${img.thumbnail}" style="width:100%;height:100%;object-fit:cover;filter:grayscale(1);">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" width="18" height="18"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`}
+      </div>
+      <div class="admin-row-info">
+        <div class="row-name" style="text-decoration:line-through;color:var(--gray-400);">${img.image_name}</div>
+        <div class="row-sub"><span style="color:${stateColors[img.estado]};font-weight:600;">${stateLabel[img.estado]||img.estado}</span> · Excluído em ${img.trashed_at ? new Date(img.trashed_at).toLocaleDateString('pt-BR') : '—'}</div>
+      </div>
+      <div class="admin-row-actions">
+        <button class="btn-icon" onclick="restoreFromTrash(${img.id},'${img.image_name.replace(/'/g,"\\'")}')">↩ Restaurar</button>
+        <button class="btn-icon danger" onclick="confirmPermanentDelete(${img.id},'${img.image_name.replace(/'/g,"\\'")}')">✕ Apagar</button>
+      </div>
+    </div>`).join('');
+}
+
+function renderAdminDevices() {
+  const list = document.getElementById('admin-devices-list');
+  document.getElementById('admin-devices-count').textContent = 'Dispositivos (' + adminCache.devices.length + ')';
+  if (!adminCache.devices.length) { list.innerHTML = emptyState('Nenhum dispositivo cadastrado'); return; }
+  list.innerHTML = adminCache.devices.map(d => `
+    <div class="admin-row">
+      <div style="width:36px;height:36px;background:var(--green-50);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--green-600)" stroke-width="2" width="18" height="18"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+      </div>
+      <div class="admin-row-info">
+        <div class="row-name">${d.name}</div>
+        <div class="row-sub">${d.location_name||'—'} · Último envio: ${d.last_seen ? new Date(d.last_seen).toLocaleString('pt-BR') : 'Nunca'}</div>
+      </div>
+      <div class="live-dot ${d.active ? 'on' : 'err'}" title="${d.active ? 'Ativo' : 'Inativo'}"></div>
+      <div class="admin-row-actions">
+        <button class="btn-icon" onclick="showDeviceKey('${d.device_key}')">Ver Chave</button>
+        <button class="btn-icon danger" onclick="confirmDeleteDevice(${d.id},'${d.name}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg> Excluir</button>
+      </div>
+    </div>`).join('');
+}
+
+function emptyState(msg) {
+  return `<div style="padding:32px;text-align:center;color:var(--gray-400);font-size:14px;">${msg}</div>`;
+}
+
+// ── IMAGE PREVIEW ──
+let previewingImg = null;
+
+function openDetectionPreview(imgData) {
+  previewingId = imgData.id;
+  previewingImg = imgData;
+  const stateColors = { formigueiro:'#ef4444', trilha:'#3b82f6', ambos:'#ef4444', nao_tem:'#94a3b8', pendente:'#94a3b8' };
+  const stateLabel  = { formigueiro:'Formigueiro', trilha:'Trilha', ambos:'Ambos', nao_tem:'Não Possui', pendente:'Pendente' };
+  document.getElementById('preview-modal-title').textContent = imgData.image_name || 'Sem nome';
+  const imgEl   = document.getElementById('preview-img');
+  const noImgEl = document.getElementById('preview-no-img');
+  const thumbSrc = imgData.thumbnail || imgData.image_url;
+  if (thumbSrc) { imgEl.src = thumbSrc; imgEl.crossOrigin = 'anonymous'; imgEl.style.display = 'block'; noImgEl.style.display = 'none'; }
+  else          { imgEl.style.display = 'none'; noImgEl.style.display = 'flex'; }
+  const cor = stateColors[imgData.estado] || '#94a3b8';
+  // badges de estado + trilha
+  const hasNest  = imgData.estado === 'formigueiro' || imgData.estado === 'ambos';
+  const hasTrail = imgData.estado === 'trilha' || imgData.estado === 'ambos';
+  let badgesHtml = `<span style="color:${cor};font-weight:700;">${stateLabel[imgData.estado]||imgData.estado}</span>`;
+  if (hasTrail && hasNest) badgesHtml = `<span style="background:#ef4444;color:#fff;padding:2px 7px;border-radius:99px;font-size:12px;font-weight:600;margin-right:4px;">🐜 Formigueiro</span><span style="background:#3b82f6;color:#fff;padding:2px 7px;border-radius:99px;font-size:12px;font-weight:600;">〰 Trilha</span>`;
+  else if (hasTrail) badgesHtml = `<span style="background:#3b82f6;color:#fff;padding:2px 7px;border-radius:99px;font-size:12px;font-weight:600;">〰 Trilha</span>`;
+  else if (hasNest)  badgesHtml = `<span style="background:#ef4444;color:#fff;padding:2px 7px;border-radius:99px;font-size:12px;font-weight:600;">🐜 Formigueiro</span>`;
+  document.getElementById('preview-estado').innerHTML = badgesHtml;
+  const verifiedBadge = imgData.verified ? ' <span style="font-size:11px;background:#dcfce7;color:#16a34a;padding:2px 7px;border-radius:99px;font-weight:600;">✓ Verificado</span>' : (imgData.device_id ? ' <span style="font-size:11px;background:#fef9c3;color:#a16207;padding:2px 7px;border-radius:99px;font-weight:600;">⚠ Não verificado</span>' : '');
+  document.getElementById('preview-source').innerHTML = (imgData.device_id ? 'Raspberry Pi' : 'Manual') + verifiedBadge;
+  document.getElementById('preview-pform').textContent = imgData.p_formigueiro != null ? Math.round(imgData.p_formigueiro * 100) + '%' : '—';
+  document.getElementById('preview-date').textContent   = new Date(imgData.created_at).toLocaleString('pt-BR');
+  const trashBtn = document.getElementById('preview-trash-btn');
+  if (trashBtn) trashBtn.style.display = currentUser?.role === 'admin' ? '' : 'none';
+  openModal('image-preview');
+}
+
+function openImagePreview(id) {
+  const img = adminCache.images.find(x => x.id === id) || dashboardImages.find(x => x.id === id);
+  if (!img) return;
+  openDetectionPreview(img);
+}
+
+async function moveToTrashFromPreview() {
+  if (!previewingId) return;
+  const name = previewingImg?.image_name || '';
+  closeModal('image-preview');
+  await moveToTrash(previewingId, name);
+}
+
+// ── ANALYZE FROM URL (RPi images) ──
+async function analyzeFromUrl(id, imageUrl, btnEl) {
+  if (!tfModel) {
+    if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Carregando...'; }
+    await loadTFModel();
+    if (!tfModel) { toast('Erro ao carregar modelo CNN.', 'error'); if (btnEl) { btnEl.disabled = false; btnEl.textContent = '⚡ Analisar'; } return null; }
+  }
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Analisando...'; }
+  let objectUrl = null;
+  return new Promise(resolve => {
+    const imgEl = new Image();
+    imgEl.onload = async () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 224; canvas.height = 224;
+        canvas.getContext('2d').drawImage(imgEl, 0, 0, 224, 224);
+        const { data } = canvas.getContext('2d').getImageData(0, 0, 224, 224);
+        const float32 = new Float32Array(1 * 224 * 224 * 3);
+        for (let i = 0; i < 224 * 224; i++) {
+          float32[i*3]   = data[i*4];
+          float32[i*3+1] = data[i*4+1];
+          float32[i*3+2] = data[i*4+2];
+        }
+        const tensor = new ort.Tensor('float32', float32, [1, 224, 224, 3]);
+        const results = await tfModel.run({ [tfModel.inputNames[0]]: tensor });
+        const out = results[tfModel.outputNames[0]].data;
+        const pForm = out[0], pTril = 1 - pForm;
+        const estado = cnnStateLabel(pForm, pTril);
+        const thumbCanvas = document.createElement('canvas');
+        thumbCanvas.width = 160; thumbCanvas.height = 120;
+        thumbCanvas.getContext('2d').drawImage(imgEl, 0, 0, 160, 120);
+        const thumb = thumbCanvas.toDataURL('image/jpeg', 0.75);
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+        const { data: detRow } = await sb.from('detections').select('device_id,lat,lng').eq('id', id).single();
+        let locUpdate = {};
+        if (detRow?.lat != null && detRow?.lng != null) {
+          locUpdate = { lat: detRow.lat, lng: detRow.lng };
+        } else if (detRow?.device_id) {
+          const { data: dev } = await sb.from('raspberry_devices').select('lat,lng').eq('name', detRow.device_id).single();
+          if (dev?.lat != null && dev?.lng != null) locUpdate = { lat: dev.lat, lng: dev.lng };
+        }
+        const { error } = await sb.from('detections').update({ estado, p_formigueiro: pForm, p_trilha: pTril, thumbnail: thumb, ...locUpdate }).eq('id', id);
+        if (error) toast('Erro ao salvar: ' + error.message, 'error');
+        else toast('Resultado: ' + estado, 'success');
+        await loadAdminData();
+        loadRaspPending();
+        resolve({ pForm, pTril, estado });
+      } catch(e) {
+        console.error(e);
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+        toast('Erro ao analisar imagem.', 'error');
+        if (btnEl) { btnEl.disabled = false; btnEl.textContent = '⚡ Analisar'; }
+        resolve(null);
+      }
+    };
+    imgEl.onerror = () => { toast('Erro ao carregar imagem.', 'error'); if (btnEl) { btnEl.disabled = false; btnEl.textContent = '⚡ Analisar'; } resolve(null); };
+    // Usa o cliente Supabase para download — evita CORS do fetch direto
+    const filename = imageUrl.split('/').pop();
+    sb.storage.from('detections').download(filename)
+      .then(({ data: blob, error: dlErr }) => {
+        if (dlErr || !blob) { toast('Erro ao baixar imagem: ' + (dlErr?.message || ''), 'error'); if (btnEl) { btnEl.disabled = false; btnEl.textContent = '⚡ Analisar'; } resolve(null); return; }
+        objectUrl = URL.createObjectURL(blob);
+        imgEl.src = objectUrl;
+      })
+      .catch(() => { toast('Erro ao baixar imagem do servidor.', 'error'); if (btnEl) { btnEl.disabled = false; btnEl.textContent = '⚡ Analisar'; } resolve(null); });
+  });
+}
+
+async function analyzeAllPending() {
+  const pending = adminCache.images.filter(i => i.estado === 'pendente' && i.image_url);
+  if (!pending.length) { toast('Nenhuma imagem pendente com URL.', ''); return; }
+  if (!tfModel) {
+    toast('Carregando modelo CNN...', '');
+    await loadTFModel();
+    if (!tfModel) { toast('Erro ao carregar modelo.', 'error'); return; }
+  }
+  const btn = document.getElementById('btn-analyze-pending2');
+  if (btn) { btn.disabled = true; }
+  for (let i = 0; i < pending.length; i++) {
+    if (btn) btn.textContent = 'Analisando ' + (i+1) + '/' + pending.length + '...';
+    await analyzeFromUrl(pending[i].id, pending[i].image_url, null);
+  }
+  if (btn) { btn.disabled = false; btn.textContent = '⚡ Analisar pendentes'; }
+  toast(pending.length + ' imagem(ns) analisada(s)!', 'success');
+}
+
+// ── RPi PENDING (Analisar page) ──
+async function loadRaspPending() {
+  if (!sb) return;
+  const grid    = document.getElementById('rasp-pending-grid');
+  const countEl = document.getElementById('rasp-pending-count');
+  const emptyEl = document.getElementById('rasp-empty');
+  const allBtn  = document.getElementById('btn-rasp-analyze-all');
+  const badge   = document.getElementById('rasp-pending-badge');
+  if (!grid) return;
+
+  const { data, error } = await sb.from('detections')
+    .select('id,image_url,device_id,created_at,estado')
+    .eq('estado', 'pendente')
+    .not('image_url', 'is', null)
+    .order('created_at', { ascending: false });
+
+  const items = (!error && data) ? data : [];
+
+  if (badge) { badge.textContent = items.length; badge.style.display = items.length > 0 ? '' : 'none'; }
+
+  if (!items.length) {
+    grid.innerHTML = '';
+    if (emptyEl) emptyEl.style.display = '';
+    if (countEl) countEl.textContent = 'Nenhuma imagem pendente';
+    if (allBtn)  allBtn.style.display = 'none';
+    return;
+  }
+
+  if (emptyEl) emptyEl.style.display = 'none';
+  if (countEl) countEl.textContent = items.length + ' imagem' + (items.length !== 1 ? 'ns' : '') + ' pendente' + (items.length !== 1 ? 's' : '');
+  if (allBtn)  allBtn.style.display = items.length > 1 ? '' : 'none';
+  const clearBtn = document.getElementById('btn-rasp-clear');
+  if (clearBtn) clearBtn.style.display = (items.length > 0 && currentUser?.role === 'admin') ? '' : 'none';
+
+  grid.innerHTML = items.map(img => {
+    const date = new Date(img.created_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border:1px solid var(--gray-200);border-radius:10px;background:var(--bg);gap:12px;">
+      <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+        <div style="width:36px;height:36px;border-radius:8px;background:var(--gray-100);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;">📷</div>
+        <div style="min-width:0;">
+          <div style="font-size:13px;font-weight:600;color:var(--fg);">${img.device_id || 'raspberrypi'}</div>
+          <div style="font-size:12px;color:var(--gray-400);">${date}</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+        <a href="${img.image_url}" target="_blank" style="font-size:12px;color:var(--gray-400);text-decoration:none;padding:4px 8px;border:1px solid var(--gray-200);border-radius:6px;">Ver foto</a>
+        <button id="rbtn-${img.id}" onclick="analyzeFromUrl(${img.id},'${img.image_url}',this)"
+          style="font-size:12px;padding:6px 14px;background:var(--green-500);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:500;">
+          ⚡ Analisar
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function syncStorageToDb() {
+  const btn = document.getElementById('btn-rasp-sync');
+  btn.disabled = true; btn.textContent = '⏳ Sincronizando...';
+  try {
+    const { data: files, error: listErr } = await sb.storage.from('detections').list('', { limit: 500 });
+    if (listErr) { toast('Erro ao listar storage: ' + listErr.message, 'error'); return; }
+    if (!files?.length) { toast('Nenhuma imagem no storage.', ''); return; }
+    const { data: existing } = await sb.from('detections').select('image_name').not('image_name','is',null);
+    const existingNames = new Set((existing || []).map(r => r.image_name));
+    const missing = files.filter(f => f.name.endsWith('.jpg') && !existingNames.has(f.name));
+    if (!missing.length) { toast('Tudo sincronizado — nenhuma imagem nova.', 'success'); return; }
+    const rows = missing.map(f => ({
+      image_url: `${SUPABASE_URL}/storage/v1/object/public/detections/${f.name}`,
+      image_name: f.name,
+      estado: 'pendente',
+      device_id: f.name.split('_')[0] || 'rasp-01'
+    }));
+    const { error: insErr } = await sb.from('detections').insert(rows);
+    if (insErr) { toast('Erro ao inserir: ' + insErr.message, 'error'); return; }
+    toast(`✅ ${missing.length} imagem(ns) sincronizada(s)!`, 'success');
+    loadRaspPending();
+    updateDashboardStats();
+  } finally {
+    btn.disabled = false; btn.textContent = '🔄 Sincronizar';
+  }
+}
+
+async function clearPendingRasp() {
+  if (currentUser?.role !== 'admin') return;
+  if (!confirm('Mover todas as imagens pendentes do Raspberry Pi para a lixeira?')) return;
+  const { error } = await sb.from('detections').update({ trashed: true, trashed_at: new Date().toISOString() }).eq('estado', 'pendente').eq('trashed', false);
+  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+  toast('Pendentes movidas para a lixeira.', 'success');
+  loadRaspPending();
+  updateDashboardStats();
+}
+
+async function analyzeAllRaspPending() {
+  if (!sb) return;
+  const { data } = await sb.from('detections').select('id,image_url').eq('estado','pendente').not('image_url','is',null);
+  if (!data || !data.length) { toast('Nenhuma imagem pendente.', ''); return; }
+  if (!tfModel) {
+    toast('Carregando modelo CNN...', '');
+    await loadTFModel();
+    if (!tfModel) { toast('Erro ao carregar modelo.', 'error'); return; }
+  }
+  const btn = document.getElementById('btn-rasp-analyze-all');
+  if (btn) btn.disabled = true;
+  for (let i = 0; i < data.length; i++) {
+    if (btn) btn.textContent = 'Analisando ' + (i+1) + '/' + data.length + '...';
+    const rbtn = document.getElementById('rbtn-' + data[i].id);
+    await analyzeFromUrl(data[i].id, data[i].image_url, rbtn);
+  }
+  if (btn) { btn.disabled = false; btn.textContent = '⚡ Analisar todos'; }
+}
+
+// ── LIMPAR DETECÇÕES (mapa) ──
+async function clearAllDetections() {
+  if (currentUser?.role !== 'admin') return;
+  if (!confirm('Mover todas as detecções para a lixeira? Isso limpa o mapa e as listas.')) return;
+  const { error } = await sb.from('detections').update({ trashed: true, trashed_at: new Date().toISOString() }).eq('trashed', false);
+  if (error) { toast('Erro ao limpar: ' + error.message, 'error'); return; }
+  toast('Detecções movidas para a lixeira.', 'success');
+  loadNestsOnMap();
+  updateDashboardStats();
+}
+
+// ── TRASH ──
+async function moveToTrash(id, name) {
+  const { error } = await sb.from('detections').update({ trashed: true, trashed_at: new Date().toISOString() }).eq('id', id);
+  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+  toast('"' + name + '" movida para a lixeira.', 'success');
+  await loadAdminData();
+}
+
+async function restoreFromTrash(id, name) {
+  const { error } = await sb.from('detections').update({ trashed: false, trashed_at: null }).eq('id', id);
+  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+  toast('"' + name + '" restaurada.', 'success');
+  await loadAdminData();
+}
+
+function confirmPermanentDelete(id, name) {
+  document.getElementById('delete-confirm-msg').textContent = 'Apagar permanentemente "' + name + '"? Esta ação NÃO pode ser desfeita.';
+  pendingDeleteFn = async () => {
+    const { error } = await sb.from('detections').delete().eq('id', id);
+    if (error) { toast('Erro: ' + error.message, 'error'); return; }
+    closeModal('confirm-delete'); toast('Imagem apagada permanentemente.', 'success'); await loadAdminData();
+  };
+  openModal('confirm-delete');
+}
+
+function confirmEmptyTrash() {
+  document.getElementById('delete-confirm-msg').textContent = 'Esvaziar a lixeira? Todas as imagens serão apagadas permanentemente.';
+  pendingDeleteFn = async () => {
+    const { error } = await sb.from('detections').delete().eq('trashed', true);
+    if (error) { toast('Erro: ' + error.message, 'error'); return; }
+    closeModal('confirm-delete'); toast('Lixeira esvaziada.', 'success'); await loadAdminData();
+  };
+  openModal('confirm-delete');
+}
+
+function emptyTrash() { confirmEmptyTrash(); }
+
+function switchAdminTab(tab, btn) {
+  document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  document.getElementById('admin-tab-' + tab).classList.add('active');
+}
+
+// edit user
+function openEditUser(id) {
+  const u = adminCache.users.find(x => x.id === id);
+  if (!u) return;
+  editingUserId = id;
+  document.getElementById('edit-user-name').value  = u.name  || '';
+  document.getElementById('edit-user-phone').value = u.phone || '';
+  document.getElementById('edit-user-role').value  = u.role  || 'viewer';
+  openModal('edit-user');
+}
+
+async function saveUserEdit() {
+  const name  = document.getElementById('edit-user-name').value.trim();
+  const phone = document.getElementById('edit-user-phone').value.trim();
+  const role  = document.getElementById('edit-user-role').value;
+  if (!name) { toast('Nome é obrigatório.', 'error'); return; }
+  const { error } = await sb.from('profiles').update({ name, phone, role, updated_at: new Date().toISOString() }).eq('id', editingUserId);
+  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+  closeModal('edit-user');
+  toast('Usuário atualizado.', 'success');
+  await loadAdminData();
+}
+
+// device
+function openAddDevice() { document.getElementById('device-name').value=''; document.getElementById('device-location').value=''; document.getElementById('device-lat').value=''; document.getElementById('device-lng').value=''; openModal('add-device'); }
+
+async function saveDevice() {
+  const name = document.getElementById('device-name').value.trim();
+  if (!name) { toast('Nome é obrigatório.', 'error'); return; }
+  const lat = parseFloat(document.getElementById('device-lat').value) || null;
+  const lng = parseFloat(document.getElementById('device-lng').value) || null;
+  const { data, error } = await sb.from('raspberry_devices').insert({ name, location_name: document.getElementById('device-location').value.trim(), lat, lng }).select().single();
+  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+  closeModal('add-device');
+  toast('Dispositivo criado!', 'success');
+  await loadAdminData();
+  setTimeout(() => showDeviceKey(data.device_key), 300);
+}
+
+function showDeviceKey(key) {
+  currentDeviceKey = key;
+  document.getElementById('modal-device-key-value').textContent = key;
+  openModal('device-key');
+}
+
+function copyDeviceKey() {
+  navigator.clipboard.writeText(currentDeviceKey).then(() => toast('Chave copiada!', 'success')).catch(() => toast('Copie manualmente.', 'error'));
+}
+
+// delete
+let pendingDeleteFn = null;
+function confirmDeleteUser(id, name) {
+  document.getElementById('delete-confirm-msg').textContent = 'Excluir o usuário "'+name+'"? Esta ação não pode ser desfeita.';
+  pendingDeleteFn = async () => { await sb.from('profiles').delete().eq('id', id); closeModal('confirm-delete'); toast('Usuário excluído.','success'); await loadAdminData(); };
+  openModal('confirm-delete');
+}
+function confirmDeleteNest(id, name) {
+  document.getElementById('delete-confirm-msg').textContent = 'Excluir a detecção "'+name+'"?';
+  pendingDeleteFn = async () => { await sb.from('detections').delete().eq('id', id); closeModal('confirm-delete'); toast('Detecção excluída.','success'); await loadAdminData(); };
+  openModal('confirm-delete');
+}
+function confirmDeleteImage(id, name) {
+  document.getElementById('delete-confirm-msg').textContent = 'Excluir a imagem "'+name+'"?';
+  pendingDeleteFn = async () => { await sb.from('detections').delete().eq('id', id); closeModal('confirm-delete'); toast('Imagem excluída.','success'); await loadAdminData(); };
+  openModal('confirm-delete');
+}
+function confirmDeleteDevice(id, name) {
+  document.getElementById('delete-confirm-msg').textContent = 'Excluir o dispositivo "'+name+'"?';
+  pendingDeleteFn = async () => { await sb.from('raspberry_devices').delete().eq('id', id); closeModal('confirm-delete'); toast('Dispositivo excluído.','success'); await loadAdminData(); };
+  openModal('confirm-delete');
+}
+async function executeDelete() { if (pendingDeleteFn) await pendingDeleteFn(); }
+
+function openModal(id)  { document.getElementById('modal-'+id).classList.add('open'); }
+function closeModal(id) { document.getElementById('modal-'+id).classList.remove('open'); }
+
+// ── EXPORT ──
+function exportExcel() {
+  if (typeof XLSX === 'undefined') { toast('Biblioteca não carregada. Tente novamente.','error'); return; }
+  const wb = XLSX.utils.book_new();
+  const resumo = [['ForeSensor V2 — Relatório'],[''],['Métrica','Valor'],['Formigueiros',adminCache.nests.length],['Imagens',adminCache.images.length],['Usuários',adminCache.users.length]];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resumo), 'Resumo');
+  if (adminCache.nests.length) {
+    const rows = [['Imagem','Estado','Conf. Formigueiro (%)','Conf. Trilha (%)','Data','Fonte']];
+    adminCache.nests.forEach(n => rows.push([n.image_name, n.estado, Math.round(n.p_formigueiro*100), Math.round(n.p_trilha*100), new Date(n.created_at).toLocaleDateString('pt-BR'), n.source]));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Formigueiros');
+  }
+  const mensal = [['Mês','Formigueiros','Trilhas','Ambos']];
+  chartLabels.forEach((m,i) => mensal.push([m, chartAllData.form[i], chartAllData.tril[i], chartAllData.ambos[i]]));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(mensal), 'Por Mês');
+  XLSX.writeFile(wb, 'foresensor_relatorio.xlsx');
+}
+function exportPDF() { window.print(); }
+
+// ── ENTER KEY ──
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('login-screen').classList.contains('active')) handleAuth();
+});
+
+// ── INIT ──
+document.addEventListener('DOMContentLoaded', async () => {
+  try { if (localStorage.getItem('fs_theme') === 'dark') toggleTheme(); } catch(_) {}
+
+  const { data: { user } } = await sb.auth.getUser();
+  if (user) {
+    await new Promise(r => setTimeout(r, 300));
+    const { data: profile } = await sb.from('profiles').select('*').eq('id', user.id).single();
+    if (profile && profile.active !== false) {
+      currentUser = { id: user.id, email: user.email, ...profile };
+      showApp();
+    }
+  }
+
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_OUT') { if (currentUser) doLogout(); }
+  });
+});
+</script>
+</body>
+</html>
